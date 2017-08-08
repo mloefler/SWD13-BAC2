@@ -1,0 +1,183 @@
+%**********************************************************************
+% Base layout + including standard packages
+%**********************************************************************
+\documentclass[a4paper,12pt]{report}
+\usepackage[german,ngerman,english]{babel}
+\usepackage[utf8]{inputenc}	% allows direct input of special chars
+\usepackage{setspace}		% permits to set space between lines
+
+% ensure proper appearance of all fonts in pdf:
+\usepackage[T1]{fontenc}
+%\usepackage{lmodern}		% lmodern after T1 fontenc (_may_ be required)
+%\usepackage{times} -- obsolete; use:
+\usepackage{mathptmx}		% Times as default text font, maths support
+\usepackage{courier}		% provides bold font (required for syntax highlighting in listings)
+
+\usepackage{multirow}		% enables table cells to span multiple rows
+
+\usepackage{parskip}		% paragraphs: no indentation at beginning, but spacing between
+
+\usepackage[pdftex]{graphicx}
+\DeclareGraphicsExtensions{.pdf,.jpg,.png}
+
+
+%**********************************************************************
+% Including non-standard packages
+%**********************************************************************
+
+\usepackage{acronym}
+
+\usepackage[usenames,dvipsnames,table]{xcolor}	% http://en.wikibooks.org/wiki/LaTeX/Colors
+\definecolor{gray20}{gray}{0.8}
+\definecolor{gray5}{gray}{0.95}
+\definecolor{olivegreen30}{RGB}{155,187,89}	% from table template in MS Word
+
+\usepackage{alltt}
+
+\usepackage{listings}
+\lstset{numbers=left, basicstyle=\tiny\ttfamily,	% numbers=none if required
+	showstringspaces=false, language=C++, frame=lines
+	captionpos=b, breaklines=false, numbersep=5pt}	% captionpos=b: caption at bottom
+
+% Geometry as defined by FH guidelines:
+\usepackage[top=3cm, bottom=3cm, left=3.5cm, right=3cm]{geometry}
+
+%\usepackage{paralist} 		% inline lists
+%\usepackage{mdwlist}
+\usepackage{enumitem}
+
+\usepackage{float}
+\floatstyle{plain}
+\restylefloat{figure}
+\usepackage{subfig}
+
+\usepackage{textcomp}		% symbols such as \texttimes and \texteuro
+%\usepackage{amssymb}		% math. symbols from the American Mathematical Society
+
+%\usepackage[Lenny]{fncychap}	% chapter heading styles
+
+
+% Biblatex
+% ---------------------------------------------------------------------
+\usepackage[autostyle]{csquotes}		% context sensitive quotation; recommended for usage with Biblatex
+% Note: date, origdate, eventdate, and urldate require yyyy-mm-dd format
+% dd or mm-dd may be omitted
+\usepackage[
+    backend=bibtex,
+    urldate=long,		% default: short, e.g. 08/15/2010
+    style=authoryear,	% Harvard citation style
+%   sorting=nty		this is default: sort by name, title, year
+    sortlocale=de_DE	set according to your needs
+    natbib=true,		% if you want to use natbib compatible citation commands; do _not_ use package natbib!
+    maxbibnames=1000,		% show all authors in the bibliography
+    citestyle=alphabetic,
+]{biblatex}
+% Strict Harvard style: URL date default is "(Visited on ...)"; so:
+% These two BibTeX entries
+%	url = {http://...},
+%	urldate = {2015-03} -- or 2015, or 2015-03-31
+% shall be printed as
+%	Available from: <http://...> [March 2015]
+\DeclareFieldFormat{urldate}{\mkbibbrackets{#1}}
+\DeclareFieldFormat{url}{Available\space from\addcolon\space <\url{#1}>}
+\addbibresource{bac1.bib}
+% ---------------------------------------------------------------------
+
+\usepackage[			% hyperref should be last package loaded
+    pdftex,			% driver
+    pdftitle={Entwicklung eines beispielhaften Software-Entwicklungsprozesses für regulierte Anwendungen},
+    pdfsubject={Bachelorarbeit},
+    pdfauthor={Mario Löfler},
+    breaklinks,			% permits line breaks for long links
+    bookmarks,			% create Adobe bookmarks
+    bookmarksnumbered,		% ... and include section numbers
+    linktocpage,		% "make page number, not text, be link on TOC ..."
+    colorlinks,			% yes ...
+    linkcolor=black,		% normal internal links;
+    anchorcolor=black,		% don't make scientific papers too much colourful => "black"
+    citecolor=black,
+    urlcolor=black,		% quite common
+    pdfstartview={Fit},		% "Fit" fits the page to the window
+    pdfpagemode=UseOutlines,	% open bookmarks in Acrobat
+    plainpages=false,		% avoids duplicate page number problem
+    pdfpagelabels,
+  ]{hyperref}
+
+%**********************************************************************
+% Layout adjustments
+%**********************************************************************
+
+% page layout (header/footer and page numbers)
+%\pagestyle{empty}
+\pagestyle{headings}
+%\pagestyle{fancy}
+
+% settings for structure
+\setcounter{secnumdepth}{3}
+%\setcounter{tocdepth}{2}
+\setcounter{tocdepth}{1}
+
+%**********************************************************************
+% LaTeX macros and commands
+%**********************************************************************
+
+% new command to start a chapter (no page number)
+\newcommand{\chapterstart}{\thispagestyle{empty}}
+
+% new command to close a chapter (flush, i.e. print remaining figures and tables)
+\newcommand{\chapterend}{\newpage{\pagestyle{empty}\cleardoublepage}}
+
+% new environment for smaller paragraphs
+\newenvironment{spar}
+{\begingroup \leftskip 0.7cm \rightskip\leftskip}
+{\par \endgroup}
+% ^^^ must be set here (or use empty line)
+
+
+%**********************************************************************
+% Special hyphenation rules
+%**********************************************************************
+
+\hyphenation{JOANNEUM}		% extend to your needs
+
+
+%**********************************************************************
+% Structure of thesis: inclusion of chapters
+%**********************************************************************
+
+\begin{document}
+
+  \include{titlepages}
+
+  \pagenumbering{roman}		% roman page numbers for title pages
+
+\begin{titlepage}
+	\include{abstract}
+\end{titlepage}
+	\chapterend
+\begin{titlepage}
+	\include{formalDeclaration}
+\end{titlepage}
+  \tableofcontents
+  \chapterend
+
+  \pagenumbering{arabic}	% ... for ordinary chapters
+  \onehalfspacing
+  \include{chapters/einleitung}
+  \include{chapters/grundlagen}
+  \include{chapters/umsetzung}  
+  \include{chapters/konklusio}
+  \listoffigures
+  \lstlistoflistings
+  \printbibliography
+  
+% Add bibliography to table of contents as "References", at chapter level
+% Keep this _after_ bibliography, only then the link in the TOC is correct!
+\addcontentsline{toc}{chapter}{References}
+
+\end{document}
+
+\selectlanguage{german}
+
+%**********************************************************************
+%**********************************************************************

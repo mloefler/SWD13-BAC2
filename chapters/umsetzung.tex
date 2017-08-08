@@ -1,0 +1,127 @@
+\selectlanguage{german}
+%-----------------------------------------------------------------------------
+\chapter{Umsetzung}\label{chap:Umsetzung}
+%-----------------------------------------------------------------------------
+\chapterstart
+In diesem Kapitel wird die Umsetzung der Anforderungen in die Software erläutert. Es werden dabei besonders die Aspekte der Datenpersistenz, der Concurrency und der Skalierbarkeit vorgestellt.
+\section{Überblick und Architektur}
+asdasd
+\section{Datenbank}
+asdasd
+\subsection{Datenbankmodell}
+aasdas
+\subsection{Zugriff}
+sdasdaas
+\section{Skalierung}
+sdfsfs
+\subsection{Skalierung der Leistung}
+sdsds
+\subsection{Funktionale Skalierung}
+sdsd
+\begin{lstlisting}[caption={Dynamic Loading},label={lst:dynamicloading},captionpos=b]
+foreach ( string file in  workerDirectory.GetFiles( "*.dll" ) )
+{
+	try
+	{
+		Assembly assembly = Assembly.LoadFile( file );
+		logger.LogDebug( "[REPO]    scanning '{0}'", file );
+
+		foreach ( Type typeToLoad in assembly.GetTypes()
+						.Where( t => t.ImplementsInterface<IWorker>() ) )
+		{
+			logger.LogDebug( "[REPO] loading '{0}'", typeToLoad.FullName );
+
+			IWorker w = (IWorker)Activator.CreateInstance( typeToLoad );
+
+			w.Initialize( ObjectRepository.Get<IConfigurationProvider>( ), logger );
+
+			if( ! repository.TryAdd( typeToLoad.FullName, w ) )
+			{
+				throw new InvalidOperationException
+				( $"Could not add class '{typeToLoad.FullName}' to repository");
+			}
+		}
+	}
+	catch ( Exception x )
+	{
+		logger.LogError( "[REPO] Error loading file '{0}': {1}"
+				, file
+				, x.GetDetailString( ) );
+		sb.AppendLine( $"Error loading file '{file}': {x.GetDetailString()}");
+
+	++errorCount;
+	}
+}
+\end{lstlisting}
+\section{Concurrency}
+dasdasd
+\subsection{Threadpool}
+asda
+\subsection{Producer-Consumer}
+adadsa
+\subsection{Blocking-Queue}
+\lstlistingname{ BlockingQueue-V1}
+\begin{lstlisting}
+	    /// <summary>
+	/// own, experimental, implementation of ablocking, notifying Q for a producer/ consumer model
+	/// </summary>
+	public class MyBlockingQueueV1<T>
+	{
+		/// <summary>
+		/// The backing store used for the elements
+		/// </summary>
+		private Queue<T> backingStore = new Queue<T>();
+		
+		/// <summary>
+		/// lock to protect the q
+		/// </summary>
+		private object myLock = new object();
+		
+		
+		
+		public MyBlockingQueueV1()
+		{ /* empty */ }
+		
+		public void Enque( T newElement )
+		{
+			lock ( myLock )
+			{
+				backingStore.Enqueue( newElement );
+			}
+		}
+		
+		
+		public T Dequeue()
+		{
+			lock ( myLock )
+			{
+				return backingStore.Dequeue();
+			}
+		}
+		
+		public T TryDequeue()
+		{
+			lock( myLock )
+			{
+				if( !IsEmpty() )
+				{
+					return Dequeue();
+				}
+				else
+				{
+					return default( T );
+				}
+			}
+		}
+		
+		public bool IsEmpty()
+		{
+			lock ( myLock )
+			{
+				return backingStore.Count == 0;
+			}
+		}
+	}
+\end{lstlisting}
+\section{Verbesserungsmöglichkeiten}
+\chapterend
