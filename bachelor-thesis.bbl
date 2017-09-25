@@ -1,5 +1,5 @@
 % $ biblatex auxiliary file $
-% $ biblatex version 2.5 $
+% $ biblatex bbl format version 2.8 $
 % Do not modify the above lines!
 %
 % This is an auxiliary file used by the 'biblatex' package.
@@ -16,7 +16,72 @@
   {}
 \endgroup
 
-\lossort
-\endlossort
+\sortlist[entry]{nyt/global/}
+  \entry{Manzei2015}{book}{}
+    \name{author}{3}{}{%
+      {{hash=MC}{%
+         family={Manzei},
+         familyi={M\bibinitperiod},
+         given={Christian},
+         giveni={C\bibinitperiod},
+      }}%
+      {{hash=HR}{%
+         family={Heinze},
+         familyi={H\bibinitperiod},
+         given={Ronald},
+         giveni={R\bibinitperiod},
+      }}%
+      {{hash=SL}{%
+         family={Schleupner},
+         familyi={S\bibinitperiod},
+         given={Linus},
+         giveni={L\bibinitperiod},
+      }}%
+    }
+    \list{publisher}{1}{%
+      {Beuth}%
+    }
+    \strng{namehash}{MCHRSL1}
+    \strng{fullhash}{MCHRSL1}
+    \field{labelnamesource}{author}
+    \field{labeltitlesource}{title}
+    \field{labelalpha}{MHS15}
+    \field{labelyear}{2015}
+    \field{sortinit}{M}
+    \field{sortinithash}{M}
+    \field{isbn}{978-3-800-73671-3}
+    \field{title}{Industrie 4.0 im internationalen Kontext - Kernkonzepte,
+  Ergebnisse, Trends}
+    \list{location}{1}{%
+      {Düsseldorf}%
+    }
+    \field{year}{2015}
+  \endentry
 
+  \entry{ms_azureiot}{online}{}
+    \name{author}{1}{}{%
+      {{hash=M}{%
+         family={Microsoft},
+         familyi={M\bibinitperiod},
+      }}%
+    }
+    \strng{namehash}{M1}
+    \strng{fullhash}{M1}
+    \field{labelnamesource}{author}
+    \field{labeltitlesource}{title}
+    \field{labelalpha}{Mic17}
+    \field{labelyear}{2017}
+    \field{sortinit}{M}
+    \field{sortinithash}{M}
+    \field{title}{.NET Documentation - AppDomain.AssemblyResolve-Ereignis}
+    \verb{url}
+    \verb https://docs.microsoft.com/en-us/azure/iot-hub/iot-hub-devguide-ident
+    \verb ity-registry
+    \endverb
+    \field{year}{2017}
+    \field{urlday}{15}
+    \field{urlmonth}{08}
+    \field{urlyear}{2017}
+  \endentry
+\endsortlist
 \endinput
