@@ -8,15 +8,112 @@ In diesem Kapitel werden die theoretischen Grundlagen zu den wichtigsten Bereich
 \section{Relationale Datenbanken}
 asda
 \subsection{Modellierung}
-dasds
+asfsadfsa
 \subsection{Primary Key}
 dfsdf
 \subsection{Locks und Isolation}
 asdas
 \section{Concurreny}
-asdas
-\subsection{Threads}
-asdas
+Ein weiterer Schwerpunkt des Schedulers ist eine möglichst optimale Nutzung der Rechenleistung um so viele Aufgaben pro Rechner wie nur möglich abzuarbeiten. Dies ist nur möglich, indem die Abarbeitung innerhalb des Schedulers parallelisiert auf mehreren Prozessorkernen abläuft. Dies kann durch die Nutzung von mehreren \emph{Threads} erreicht werden. Die Anzahl der Threads, und damit die Auslastung des Rechners durch den Scheduler kann durch den Administrator gemäß den Anforderungen festgelegt werden. So kann sichergestellt werden, dass Rechenleistung für weitere \emph{Prozesse} neben dem Scheduler zur Verfügung steht.
+\\Unter Concurrency versteht man das mehrere Aktivitäten in einem Rechner die zur selben Zeit ablaufen können. Alle modernen Rechner sind \emph{concurrent}, also haben die Fähigkeit mehrere Aktivitäten zur gleichen Zeit auszuführen, da sie über mehrere Prozessorkerne und eigenständige Subsysteme wie Festplatten oder Netzwerkkarten verfügen.\cite{Anderson2014}
+\subsection{Prozesse und Threads}
+Die grundlegende Einheit in der Programme durch ein Betriebssystem ausgeführt werden ist der Prozess. Dieser ist die Menge aus Programmcode und Daten aus denen ein \emph{ Programm} besteht und das zur Ausführung in den Speicher geladen wurde. Ein Programm (der Code) kann dabei gleichzeitig in mehreren Prozessen ausgeführt werden\footnote{In modernen Betriebssystemen wird dabei der Code in der Regel nicht mehrmals in den Arbeitsspeicher geladen sondern der selbe Code im Speicher von mehreren Prozessen genutzt.}. Die Prozesse sind durch das Betriebssystem voneinander isoliert, so dass ein Prozess nicht auf die Daten, also den Speicher des anderen Prozesses zugreifen kann.\cite[S. 71ff]{tanenbaum2016} \"Ein Prozess ist im Grunde ein Behälter, in dem alle Informationen aufbewahrt werden, die zur Ausführung eines Programmes benötigt werden"\cite[S. 71]{tanenbaum2016}.
+\\Das Starten eines Prozesses durch das Betriebssystem ist durch die notwendigen Arbeitsschritte (Allokieren des Speichers, Laden des Codes, Anlegen der Betriebssystem internen Verwaltungsstrukturen ...) aufwendig.
+\\Die Ausführung von Code auf einem Prozessor erfolgt durch eine Recheneinheit, die einzelnen Arbeitsanweisungen werden dabei schrittweise abgearbeitet. Daraus ergibt sich, dass ein Kern immer nur einen Prozess abarbeiten kann. Das Abarbeiten von mehreren Prozessen erfolgt durch die so genannte \emph{Multiprogrammierung} (Siehe Abbildung \ref{fig:time_slice}). Dabei wird in kurzen Abständen zwischen einzelnen Prozessen gewechselt, und diese damit scheibchenweise ausgeführt. Durch den schnellen Wechsel entsteht der Eindruck, dass die Prozesse gleichzeitig ablaufen. Man nennt dies auch Pseudo-Parallelität.\cite[S. 127ff]{tanenbaum2016} Der Wechsel zwischen den Prozessen erfolgt grundlegend nach fixen Zeitintervallen.
+
+\begin{figure}
+	\centering
+	\includegraphics[width=0.7\linewidth]{images/time_slice}
+	\caption{Multi-Programmierung\cite[S. 128]{tanenbaum2016}}
+	\label{fig:time_slice}
+\end{figure}
+
+Einige Arbeitsschritte eines Prozesses können direkt und ohne Verzögerung ausgeführt werden, andere Arbeitsschritte können durch den Zugriff auf langsame Ressourcen wie Festplatten I/O oder Kommunikation über Netzwerke zu Verzögerungen führen. In so einem Arbeitsschritt ist der Prozess blockiert und bis zur Erledigung des Zugriffs kann kein weiterer Arbeitsschritt ausgeführt werden. Das Betriebssystem markiert den Prozess nach dem Start der Anweisung als \emph{blockiert} und wechselt zu einem anderen Prozess. Ein Prozess kann dabei wie in \ref{fig:prozessstati} dargestellt mehrere Stati einnehmen. Er wird im Status Wartend angelegt, wird dann durch das Betriebssystem zur Ausführung ausgewählt und wird damit zum laufenden Prozess. Nach Ablauf der Zeitscheibe\footnote{Oder dem Aufruf einer Betriebssystemmethode wie \textit{yield} oder \textit{sleep} mit der ein thread anzeigen kann dass er nicht mehr weiter aktiv sein möchte} wird die Ausführung des Prozesses unterbrochen und er wird zum wartenden Prozess. Wird während der Ausführung eine Betriebssystemmethode ausgeführt die auf externe Ressourcen wartet dann wird der Prozess unterbrochen und bekommt den Status blockiert. Erst wenn die Betriebssystemmethode abgeschlossen wurde, wird der Prozess in den Status wartend überführt und kann somit wieder zur Ausführung ausgewählt werden.
+
+\begin{figure}
+	\centering
+	\includegraphics[width=0.7\linewidth]{images/B2_Producer_Consumer_1}
+	\caption{Prozessstati\cite[S. 134]{tanenbaum2016}\cite[S. 152]{Dahlin2012}}
+	\label{fig:prozessstati}
+\end{figure}
+
+
+Das Betriebssystem wechselt nur zu Prozessen die ausgeführt werden können. Gibt es zu einem Zeitpunkt viele Prozesse die blockiert sind\footnote{meist durch das Warten I/O auf Speichermedien} so ist die I/O Leistung des Rechners der die Leistung begrenzende Faktor, gibt es viele Prozesse die ausgeführt werden könnten ist es die Prozessorleistung.
+\\Die lineare Ausführung der Anweisungen kann auch als \emph{thread of control} bezeichnet werden, womit jeder Prozess zumindest einen solchen \emph{thread} hat. Um innerhalb eines Prozesses mehrere Arbeiten gleichzeitig zu erledigen\footnote{Oder auch bestimmte Aufgaben wie I/O einfacher gestalten zu können} kann es wünschenswert sein, mehrere solche threads innerhalb des selben Prozesses, und damit innerhalb eines Adressraums zu verwenden. Dies kann innerhalb eines Prozesses durch die Erzeugung weiterer threads erfolgen. Ein Prozess kann praktisch eine beliebige Anzahl von threads gleichzeitig Anfordern\footnote{Unter Windows beschränkt meist durch den Hauptspeicher, unter Linux durch das Betriebssystem und einstellbar unter /proc/sys/kernel/threads-max}. Aus praktischen Gründen sollte die tatsächlich angeforderte Anzahl deutlich darunter liegen, da sonst durch den nötigen Mehraufwand der Verwaltung innerhalb des Betriebssystems die positiven Effekte der Verwendung von threads wieder zunichte gemacht werden\footnote{"[The maximum thread count] doesn't matter, and if you find it does matter, you need to rethink what you're doing so that it doesn't matter"\cite{stacko_threadcount}}.
+\\Threads haben \cite[S. 148]{tanenbaum2016}
+\begin{itemize}
+	\item einen eigenen Befehlszähler, es kann somit jeder thread unabhängig eine eigene Anweisung ausführen.
+	\item einen eigenen Stack, und damit eine eigene Aufrufhierarchie und Argumente. für Funktionsaufrufe
+	\item eigene Register.
+	\item eigenen Zustand( siehe Prozesszustände).
+	\item \emph{keinen} eigenen Adressraum, alle threads teilen sich die selben globalen Strukturen wie Dateien oder explizit allokiertem Speicher.
+\end{itemize}	
+Mit diesen Eigenschaften kann man einen Prozess also vereinfacht auch als einen thread mit Adressraum darstellen.\cite[S. 1]{butenhof1997}
+\subsection{Thread Programmierung}
+Um threads nutzen zu können stellt das .NET Framework  Methoden zur Verfügung\cite{ms_threading}\footnote{Die Funktionen um mit threads umzugehen folgen meist dem POSIX Thread Standard und sind somit in den meisten Betriebssystemen und Frameworks ähnlich\cite{butenhof1997} }:
+\begin{table}[]
+	\centering
+	\label{Ttab:thread-methoden}
+	\begin{tabular}{| l | p{10cm} |}
+		\hline
+		\textit{\textbf{Methode}} & \textit{\textbf{Beschreibung}}  \\
+		\hline
+		new Thread()                                         &    Konstruktor mit dem ein neuer Thread angelegt, aber noch nicht gestartet wird\\
+		\hline
+		Thread.Start/(                                        &    Methode mit der der Thread gestartet wird und mit der Abarbeitung der Thread-Main Methode begonnen wird.\\
+		\hline
+		Thread.Abort()                                        &   Bricht die Ausführung eines Threads ab\\
+		\hline
+		Thread.Join()										 & Wartet auf die Beendigung eines Threads\\
+		\hline
+		Thread.Sleep()										& Unterbricht die Ausführung des Threads für eine bestimmte Zeitspanne\\
+		\hline
+		Thread.Yield()										& Gibt die Ausführung des aktuellen Threads auf und ermöglicht dem Betriebssystem einen neuen Thread auszuwählen\cite{ms_threading_yield}\\
+		\hline
+	\end{tabular}
+	\caption{.NET thread-Methoden}
+\end{table}
+Damit kann ein Prozess (und damit der erste thread innerhalb des Prozesses) weitere threads anlegen und diese wieder beenden. Ein einfaches Programm mit mehreren Threads in .NET/ C\# ist in Listing \ref{lst:thread_1} dargestellt.
+\begin{lstlisting}[caption={Thread Hello World},label={lst:thread_1},captionpos=b]
+class TestThread
+{
+	private volatile bool runThread = true;
+	
+	public void Main()
+	{
+		Thread threadMain = new Thread( ThreadMain );
+
+		threadMain.Start();
+
+		while ( threadMain.IsAlive ) ;
+
+		Thread.Sleep( 10000 );
+
+		runThread = false;
+		threadMain.Join();
+	}
+	
+	private void ThreadMain()
+	{
+		while( runThread )
+		{
+			Console.Out.WriteLine($"Thread {Thread.CurrentThread.Name} is here");
+			Thread.Sleep( 1000 );
+		}
+	}
+}
+\end{lstlisting}
+In Zeile 7 wird ein neuer Thread angelegt, aber noch nicht gestartet. Das Argument des Konstruktors ist die Methode die beim Starten des threads ausgeführt wird. In Zeile 9 wird der thread gestartet und ist ab diesem Zeitpunkt ausführbar. Die Ausführung startet nicht sofort, sondern dann wen das Betriebssystem den thread zur Ausführung auswählt. Aus diesem Grund wird in Zeile 11 darauf gewartet dass der Thread tatsächlich ausgeführt wurde\footnote{Genau genommen zumindest in einer Zeitscheibe ausgeführt wurde, er kann danach ja wieder unterbrochen werden.}\footnote{Würde man das \textit{Sleep} beginnen ohne dass der thread aktiv geworden ist, könnte die thread-run Variable auf false gesetzt werden, ohne dass der thread auch nur gestartet wurde. Der Zeitpunkt wann der Thread tatsächlich gestartet wird ist nicht vorhersagbar.}.
+\\In Zeile 15 wird nach einiger Zeit dem thread mittels tread-run variable mitgeteilt dass er sich beenden soll. Damit kann der thread seine aktuelle Aufgabe beenden und sich danach beenden. Diese Variable muss als \emph{volatile} markiert sein, da sie sich außerhalb des aktuellen threads ändern kann und somit der Zugriff auf den Wert dieser Variable nicht durch Vorhersage der Instruktionen aus dem aktuellen thead vorhergesagt, und damit optimiert werden kann.\cite{ms_volatile} Der thread könnte auch mithilfe von Thread.Abort() abgebrochen werden, dann wird er sofort abgebrochen ohne dass er eine eventuell gerade ausgeführte Aufgabe fertig abarbeiten kann. 
+\\In Zeile 16 wird auf die Beendigung des threads gewartet und danach das Programm beendet.
+
+
 \subsection{Synchronisierung}
-dasdas
+Threads sind aus Sicht eines (Applikations-)Entwicklers virtualisierte Prozessorkerne. Der Entwickler kann für sich vereinfacht annehmen dass die Hardware beliebig viele Prozessorkerne hat, die tatsächliche Zuteilung eines threads zur Ausführung auf einen Prozessorkern wird ihm durch das Betriebssystem abgenommen (Siehe Abbildung \ref{fig:threads_cores}). Diese Zuteilung erfolgt für alle threads über Prozessgrenzen hinweg und wird durch viele Parameter beeinflusst\footnote{Insgesamte Auslastung des Rechners, Prioritäten von Threads ...} und ist daher durch den Entwickler nicht vorherzusagen. Dadurch darf sich der Entwickler nicht auf eine gewisse Abfolge an Abläufen über mehrere threads hinweg verlassen. Ist eine definierte Reihenfolge notwendig, so muss diese durch den Entwickler explizit erzwungen werden. Die Anzahl an Prozessorkernen im Rechner ist die maximale Anzahl an gleichzeitig aktiven threads.
+\begin{figure}
+	\centering
+	\includegraphics[width=0.7\linewidth]{images/threads_cores.png}
+	\caption{Zuteilung threads zu Prozessorkernen\cite[S. 140]{Dahlin2012}}
+	\label{fig:threads_cores}
+\end{figure}
 \chapterend

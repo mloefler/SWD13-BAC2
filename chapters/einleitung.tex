@@ -25,8 +25,15 @@ Ziel der Arbeit ist es einen funktionstüchtigen Scheduler der auf mehreren Rech
 \\Im Theorieteil werden die zugrundeliegenden Themen im Bereich Datenbanken und Concurrency\footnote{Zu Deutsch Nebenläufigkeit. Im Sinne der besseren technischen Verständlichkeit werde ich im folgenden nur den englischen Fachbegriff verwenden.} mittels Literaturrecherche erläutert.\\ Durch diese Erläuterungen sollen die getroffenen Designentscheidungen untermauert werden und einem Entwickler die Themenkomplexe verständlich vermittelt werden.
 
 \section{Verwendete Programmierumgebung}
-Da eine der technischen Anforderungen die Ausführbarkeit unter Microsoft Windows ist, habe ich mich zur Umsetzung der Lösung mittels C\# und dem Microsoft .Net Framework v 4.6 entschlossen, als Datenbank wird Microsoft SQL Sever 2016 verwendet. Die Entwicklung erfolgte unter Microsoft Visual Studio 2017. Als objektrationales Mapping Tool zur einfachen Anbindung von Datenbanken wurde das Microsoft Entity Framework 6.1 verwendet.\\
-Die Entscheidung war durch folgende Askepte geprägt
+Für die Umsetzung des Schedulers - und in folge auch der Implementierung der einzelnen Aufgaben - wurde das Microsoft .NET Ökosystem gewählt. Verwendet wurden
+\begin{itemize}
+	\item Microsoft .NET 4.6
+	\item Microsoft C\# 7
+	\item Microsoft Visual Studio 2017 Express Edition
+	\item Microsoft Entity Framework 6 als ORM Schicht\footnote{object-relational mapping, eine Bibliothek die den Zugriff auf eine relationale Datenbank sowie die Abbildung der Daten in Klassen und Instanzen implementiert. Vgl. \cite{ef_orm} }
+	\item Microsoft SQL Server 2016 als Datenbank
+\end{itemize}
+Die Auswahl wurde einerseits durch meinen bisherige Erfahrung mit .NET / C\# geprägt, anderseits spielten vor allem folgende Faktoren eine entscheidende Rolle:
 \begin{itemize}
 	\item Lauffähigkeit unter Microsoft Windows
 	\item Automatische Installierbarkeit von Sicherheitspatches für die Laufzeitumgebung
