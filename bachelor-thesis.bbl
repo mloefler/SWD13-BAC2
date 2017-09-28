@@ -230,7 +230,7 @@
     \field{urlyear}{2017}
   \endentry
 
-  \entry{ms_threading}{online}{}
+  \entry{ms_interlocked_barrier}{online}{}
     \name{author}{1}{}{%
       {{hash=M}{%
          family={Microsoft},
@@ -245,6 +245,61 @@
     \field{extraalpha}{3}
     \field{labelyear}{n/a}
     \field{extrayear}{3}
+    \field{sortinit}{M}
+    \field{sortinithash}{M}
+    \field{title}{.NET Referenz Interlocked.MemoryBarrier()}
+    \verb{url}
+    \verb https://msdn.microsoft.com/en-us/library/system.threading.interlocked
+    \verb .memorybarrier(v=vs.110).aspx
+    \endverb
+    \field{year}{n/a}
+    \field{urlday}{15}
+    \field{urlmonth}{06}
+    \field{urlyear}{2017}
+  \endentry
+
+  \entry{ms_threadlocal}{online}{}
+    \name{author}{1}{}{%
+      {{hash=M}{%
+         family={Microsoft},
+         familyi={M\bibinitperiod},
+      }}%
+    }
+    \strng{namehash}{M1}
+    \strng{fullhash}{M1}
+    \field{labelnamesource}{author}
+    \field{labeltitlesource}{title}
+    \field{labelalpha}{Micna}
+    \field{extraalpha}{4}
+    \field{labelyear}{n/a}
+    \field{extrayear}{4}
+    \field{sortinit}{M}
+    \field{sortinithash}{M}
+    \field{title}{.NET Referenz ThreadLocal}
+    \verb{url}
+    \verb https://msdn.microsoft.com/de-de/library/dd642243(v=vs.110).aspx
+    \endverb
+    \field{year}{n/a}
+    \field{urlday}{15}
+    \field{urlmonth}{06}
+    \field{urlyear}{2017}
+  \endentry
+
+  \entry{ms_threading}{online}{}
+    \name{author}{1}{}{%
+      {{hash=M}{%
+         family={Microsoft},
+         familyi={M\bibinitperiod},
+      }}%
+    }
+    \strng{namehash}{M1}
+    \strng{fullhash}{M1}
+    \field{labelnamesource}{author}
+    \field{labeltitlesource}{title}
+    \field{labelalpha}{Micna}
+    \field{extraalpha}{5}
+    \field{labelyear}{n/a}
+    \field{extrayear}{5}
     \field{sortinit}{M}
     \field{sortinithash}{M}
     \field{title}{Threading Tutorial}

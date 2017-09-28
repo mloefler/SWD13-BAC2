@@ -5,20 +5,12 @@
 \chapterstart
 In diesem Kapitel werden die theoretischen Grundlagen zu den wichtigsten Bereichen der zu entwickelnden Software erläutert. Auf eine Einführung in die verwendete Programmiersprache und deren Ökosystem wurde aus Platzgründen verzichtet. Es werden ausgewählte Themen aus den Bereichen relationale Datenbank und Concurrency beschrieben.
 
-\section{Relationale Datenbanken}
-asda
-\subsection{Modellierung}
-asfsadfsa
-\subsection{Primary Key}
-dfsdf
-\subsection{Locks und Isolation}
-asdas
 \section{Concurreny}
 Ein weiterer Schwerpunkt des Schedulers ist eine möglichst optimale Nutzung der Rechenleistung um so viele Aufgaben pro Rechner wie nur möglich abzuarbeiten. Dies ist nur möglich, indem die Abarbeitung innerhalb des Schedulers parallelisiert auf mehreren Prozessorkernen abläuft. Dies kann durch die Nutzung von mehreren \emph{Threads} erreicht werden. Die Anzahl der Threads, und damit die Auslastung des Rechners durch den Scheduler kann durch den Administrator gemäß den Anforderungen festgelegt werden. So kann sichergestellt werden, dass Rechenleistung für weitere \emph{Prozesse} neben dem Scheduler zur Verfügung steht.
 \\Unter Concurrency versteht man das mehrere Aktivitäten in einem Rechner die zur selben Zeit ablaufen können. Alle modernen Rechner sind \emph{concurrent}, also haben die Fähigkeit mehrere Aktivitäten zur gleichen Zeit auszuführen, da sie über mehrere Prozessorkerne und eigenständige Subsysteme wie Festplatten oder Netzwerkkarten verfügen.\cite{Anderson2014}
 \subsection{Prozesse und Threads}
-Die grundlegende Einheit in der Programme durch ein Betriebssystem ausgeführt werden ist der Prozess. Dieser ist die Menge aus Programmcode und Daten aus denen ein \emph{ Programm} besteht und das zur Ausführung in den Speicher geladen wurde. Ein Programm (der Code) kann dabei gleichzeitig in mehreren Prozessen ausgeführt werden\footnote{In modernen Betriebssystemen wird dabei der Code in der Regel nicht mehrmals in den Arbeitsspeicher geladen sondern der selbe Code im Speicher von mehreren Prozessen genutzt.}. Die Prozesse sind durch das Betriebssystem voneinander isoliert, so dass ein Prozess nicht auf die Daten, also den Speicher des anderen Prozesses zugreifen kann.\cite[S. 71ff]{tanenbaum2016} \"Ein Prozess ist im Grunde ein Behälter, in dem alle Informationen aufbewahrt werden, die zur Ausführung eines Programmes benötigt werden"\cite[S. 71]{tanenbaum2016}.
-\\Das Starten eines Prozesses durch das Betriebssystem ist durch die notwendigen Arbeitsschritte (Allokieren des Speichers, Laden des Codes, Anlegen der Betriebssystem internen Verwaltungsstrukturen ...) aufwendig.
+Die grundlegende Einheit in der Programme durch ein Betriebssystem ausgeführt werden ist der Prozess. Dieser ist die Menge aus Programmcode und Daten aus denen ein \emph{Programm} besteht und das zur Ausführung in den Speicher geladen wurde. Ein Programm (der Code) kann dabei gleichzeitig in mehreren Prozessen ausgeführt werden\footnote{In modernen Betriebssystemen wird dabei der Code in der Regel nicht mehrmals in den Arbeitsspeicher geladen sondern der selbe Code im Speicher von mehreren Prozessen genutzt.}. Die Prozesse sind durch das Betriebssystem voneinander isoliert, so dass ein Prozess nicht auf die Daten, also den Speicher des anderen Prozesses zugreifen kann.\cite[S. 71ff]{tanenbaum2016} \"Ein Prozess ist im Grunde ein Behälter, in dem alle Informationen aufbewahrt werden, die zur Ausführung eines Programmes benötigt werden"\cite[S. 71]{tanenbaum2016}.
+\\Das Starten eines Prozesses durch das Betriebssystem ist durch die notwendigen Arbeitsschritte (Allokieren des Speichers, Laden des Codes, Anlegen der Betriebssystem internen Verwaltungsstrukturen ...) aufwendig und daher langwierig\cite[S.1091ff]{tanenbaum2016}. Daher sind Scheduler die Aufgaben durch Starten von Prozessen implementieren für Aufgaben, die nur aus wenigen Schritten bestehen und daher nur kurz laufen, nicht gut geeignet.
 \\Die Ausführung von Code auf einem Prozessor erfolgt durch eine Recheneinheit, die einzelnen Arbeitsanweisungen werden dabei schrittweise abgearbeitet. Daraus ergibt sich, dass ein Kern immer nur einen Prozess abarbeiten kann. Das Abarbeiten von mehreren Prozessen erfolgt durch die so genannte \emph{Multiprogrammierung} (Siehe Abbildung \ref{fig:time_slice}). Dabei wird in kurzen Abständen zwischen einzelnen Prozessen gewechselt, und diese damit scheibchenweise ausgeführt. Durch den schnellen Wechsel entsteht der Eindruck, dass die Prozesse gleichzeitig ablaufen. Man nennt dies auch Pseudo-Parallelität.\cite[S. 127ff]{tanenbaum2016} Der Wechsel zwischen den Prozessen erfolgt grundlegend nach fixen Zeitintervallen.
 
 \begin{figure}
@@ -39,7 +31,7 @@ Einige Arbeitsschritte eines Prozesses können direkt und ohne Verzögerung ausg
 
 
 Das Betriebssystem wechselt nur zu Prozessen die ausgeführt werden können. Gibt es zu einem Zeitpunkt viele Prozesse die blockiert sind\footnote{meist durch das Warten I/O auf Speichermedien} so ist die I/O Leistung des Rechners der die Leistung begrenzende Faktor, gibt es viele Prozesse die ausgeführt werden könnten ist es die Prozessorleistung.
-\\Die lineare Ausführung der Anweisungen kann auch als \emph{thread of control} bezeichnet werden, womit jeder Prozess zumindest einen solchen \emph{thread} hat. Um innerhalb eines Prozesses mehrere Arbeiten gleichzeitig zu erledigen\footnote{Oder auch bestimmte Aufgaben wie I/O einfacher gestalten zu können} kann es wünschenswert sein, mehrere solche threads innerhalb des selben Prozesses, und damit innerhalb eines Adressraums zu verwenden. Dies kann innerhalb eines Prozesses durch die Erzeugung weiterer threads erfolgen. Ein Prozess kann praktisch eine beliebige Anzahl von threads gleichzeitig Anfordern\footnote{Unter Windows beschränkt meist durch den Hauptspeicher, unter Linux durch das Betriebssystem und einstellbar unter /proc/sys/kernel/threads-max}. Aus praktischen Gründen sollte die tatsächlich angeforderte Anzahl deutlich darunter liegen, da sonst durch den nötigen Mehraufwand der Verwaltung innerhalb des Betriebssystems die positiven Effekte der Verwendung von threads wieder zunichte gemacht werden\footnote{"[The maximum thread count] doesn't matter, and if you find it does matter, you need to rethink what you're doing so that it doesn't matter"\cite{stacko_threadcount}}.
+\\Die lineare Ausführung der Anweisungen kann auch als \emph{thread of control} bezeichnet werden, womit jeder Prozess zumindest einen solchen \emph{thread} hat. Um innerhalb eines Prozesses mehrere Arbeiten gleichzeitig zu erledigen\footnote{Oder auch bestimmte Aufgaben wie I/O einfacher gestalten zu können} kann es wünschenswert sein, mehrere solche threads innerhalb des selben Prozesses, und damit innerhalb eines Adressraums zu verwenden. Dies kann innerhalb eines Prozesses durch die Erzeugung weiterer threads erfolgen. Ein Prozess kann praktisch eine beliebige Anzahl von threads gleichzeitig Anfordern\footnote{Unter Windows beschränkt meist durch den Hauptspeicher, unter Linux durch das Betriebssystem und einstellbar unter \textit{/proc/sys/kernel/threads-max}}. Aus praktischen Gründen sollte die tatsächlich angeforderte Anzahl deutlich darunter liegen, da sonst durch den nötigen Mehraufwand der Verwaltung innerhalb des Betriebssystems die positiven Effekte der Verwendung von threads wieder zunichte gemacht werden\footnote{"[The maximum thread count] doesn't matter, and if you find it does matter, you need to rethink what you're doing so that it doesn't matter"\cite{stacko_threadcount}}.
 \\Threads haben \cite[S. 148]{tanenbaum2016}
 \begin{itemize}
 	\item einen eigenen Befehlszähler, es kann somit jeder thread unabhängig eine eigene Anweisung ausführen.
@@ -109,11 +101,88 @@ In Zeile 7 wird ein neuer Thread angelegt, aber noch nicht gestartet. Das Argume
 
 
 \subsection{Synchronisierung}
-Threads sind aus Sicht eines (Applikations-)Entwicklers virtualisierte Prozessorkerne. Der Entwickler kann für sich vereinfacht annehmen dass die Hardware beliebig viele Prozessorkerne hat, die tatsächliche Zuteilung eines threads zur Ausführung auf einen Prozessorkern wird ihm durch das Betriebssystem abgenommen (Siehe Abbildung \ref{fig:threads_cores}). Diese Zuteilung erfolgt für alle threads über Prozessgrenzen hinweg und wird durch viele Parameter beeinflusst\footnote{Insgesamte Auslastung des Rechners, Prioritäten von Threads ...} und ist daher durch den Entwickler nicht vorherzusagen. Dadurch darf sich der Entwickler nicht auf eine gewisse Abfolge an Abläufen über mehrere threads hinweg verlassen. Ist eine definierte Reihenfolge notwendig, so muss diese durch den Entwickler explizit erzwungen werden. Die Anzahl an Prozessorkernen im Rechner ist die maximale Anzahl an gleichzeitig aktiven threads.
+Threads sind aus Sicht eines (Applikations-)Entwicklers virtualisierte Prozessorkerne. Der Entwickler kann vereinfacht annehmen dass die Hardware beliebig viele Prozessorkerne hat, die tatsächliche Zuteilung eines threads zur Ausführung auf einen Prozessorkern wird ihm durch das Betriebssystem abgenommen (Siehe Abbildung \ref{fig:threads_cores}). Diese Zuteilung erfolgt für alle threads über Prozessgrenzen hinweg und wird durch viele Parameter beeinflusst\footnote{Insgesamte Auslastung des Rechners, Prioritäten von Threads ...} und ist daher durch den Entwickler nicht vorherzusagen. Der Entwickler darf sich nicht auf eine gewisse Abfolge an Abläufen über mehrere threads hinweg verlassen. Ist eine definierte Reihenfolge notwendig, so muss diese durch den Entwickler explizit erzwungen werden. Die Anzahl an Prozessorkernen im Rechner ist die maximale Anzahl an gleichzeitig aktiven threads.\cite[S. 140]{Dahlin2012}
+
 \begin{figure}
 	\centering
 	\includegraphics[width=0.7\linewidth]{images/threads_cores.png}
 	\caption{Zuteilung threads zu Prozessorkernen\cite[S. 140]{Dahlin2012}}
 	\label{fig:threads_cores}
 \end{figure}
+
+In fast allen Anwendungszwecken haben threads Daten die nur durch sie selbst verändert werden. Diese werden als \emph{thread-local} oder \emph{per-thread} Daten genannt. Diese Daten können direkt manipuliert werden, da es zu keiner Beeinflussung durch andere threads kommen kann. Diese Daten werden entweder als Variablen am Stack angelegt oder in .NET innerhalb einer Klasse mittels der Hilfsklasse \textit{ThreadLocal} allokiert werden\cite{ms_threadlocal}. 
+\\Unglücklicherweise\footnote{Die Formulierung in \cite[S. 179]{Dahlin2012} ist sehr treffend.} besteht aber meist die Notwendigkeit dass threads kooperieren und Daten gemeinsam nutzen müssen. Dies können nun globale Ergebnisdaten einer auf mehrere threads verteilten Berechnung sein oder auch Strukturen zur Verteilung von Arbeit (\textit{dispatching}) auf mehrere threads bei einer Trennung der Erzeugung von Arbeit (producer) und der Erledigung (consumer). Diese Zugriffe von mehreren threads auf dieselben Daten werden auch \emph{race-condition} genannt, da sich die threads ein Rennen liefern wer die Daten zuerst ändern kann.
+\\Die einfachste race-condition ist in Codebeispiel \ref{lst:thread_2} dargestellt\cite[S. 182]{Dahlin2012}. Am Ende des Programmes kann nicht mit Sicherheit gesagt werden, welchen Wert die Variable \textit{theValue} hat.
+
+\begin{lstlisting}[caption={Thread race-condition},label={lst:thread_2},captionpos=b]
+class TestRaceCondition
+{
+	private volatile Int32 theValue = 0;
+	
+	public void Main()
+	{
+        var thread1 = new Thread( () => theValue = 1 );
+		var thread2 = new Thread( () => theValue = 42 );
+
+		thread1.Start();
+		thread2.Start();
+
+		thread1.Join();
+		thread2.Join();
+	}
+}
+\end{lstlisting}
+
+Solche nicht vorhersagbaren Zustände müssen vermieden werden. Ein erster, naiver Versuch ist in Codebeispiel \ref{lst:thread_3} dargestellt.\cite[S. 180]{Dahlin2012}
+\begin{lstlisting}[caption={Thread naiver Mutex},label={lst:thread_3},captionpos=b]
+class TestNaiveMutex
+{
+    private volatile bool stepOneComplete = false;
+	private volatile int valueOne = 0;
+	private volatile int valueTwo = 0;
+
+	public void Test_NaiveMutex()
+	{
+		var thread_1 = new Thread( () => {
+			valueOne = 42;
+			stepOneComplete = true;
+		} );
+
+		var thread_2 = new Thread( () => {
+			while ( !stepOneComplete ) ;
+			valueTwo = valueOne * 2;
+		} );
+
+	thread_1.Start(); thread_2.Start();
+	thread_1.Join(); thread_2.Join();
+}
+\end{lstlisting}
+Über die Variable \textit{stepOneComplete} wird versucht mit dem zweiten thread so lange zu warten (Zeile 15) bis das Ergebnis des ersten thread vorliegt. Das Problem ist hier nicht offensichtlich, da es erst durch das Kompilieren oder durch die CPU selbst entsteht. Alle modernen Compiler oder CPUs versuchen Code zu optimieren, und eine der Strategien dabei ist das Verschieben von Instruktionen ohne Nebenwirkung. Die Verschiebung der Zuweisung in Zeile 11 hätte in einem Programm mit nur einem thread keine Nebenwirkung, diese tritt erst durch den zweiten thread auf, und ist somit durch den Compiler oder die CPU nicht mehr erkennbar.
+\\Die beiden obigen Beispiele haben schon in simplen Codebeispielen gezeigt, dass eine korrekte Umsetzung von Zugriffen auf geteilte Datenstrukturen unumgänglich ist. Dafür stehen Entwicklern folgende Methoden zur Verfügung\cite[S. 170ff]{tanenbaum2016}:
+\begin{itemize}
+	\item Vermeiden von gemeinsamen Datenstrukturen
+	\item Atomare Operationen
+	\item Speicherbarrieren
+	\item Sperren
+	\item Monitore
+\end{itemize}
+\subsubsection{Vermeiden von gemeinsamen Datenstrukturen}	
+Das Vermeiden von gemeinsam genutzten Datenstrukturen ist der sicherste und effizienteste Weg um sich vor race-conditions zu schützen. Bei komplexen Aufgaben kann die Stabilität und Ausführungsgeschwindigkeit drastisch erhöht werden wenn die verwendeten Algorithmen - wo möglich - geändert werden, so dass kein Zugriff auf gemeinsame Datenstrukturen notwendig ist. Auch eine Reduktion der Häufigkeit der Zugriffe auf gemeinsam genutzte Datenstrukturen ist hilfreich. So könnten in etwa Ergebnisse innerhalb eines threads berechnet werden und erst am Ende einmalig mit dem Gesamtergebnis zusammengeführt werden, anstatt Ergebnisse einzelner Rechenschritte in ein Gesamtergebnis zu speichern.
+\subsubsection{Atomare Operationen}	
+Eine atomare Operation ist eine Anweisung die durch die CPU ausgeführt wird und in einem Schritt ohne Unterbrechung durchgeführt wird. Für moderne Architekturen sind das in der Regel Operationen an 32bit Ganzahlwerten. In Codebeispiel \ref{lst:thread_2}  in etwa ist der Wert von \textit{theValue} immer 1 oder 42, aber niemals etwas anderes. Würde der Datentyp in etwa \textit{double}\footnote{Double hat eine Länge von 64 bit} sein, ist die Größe des Datentyps nicht mehr atomar, die einfache Zuweisung \textit{theValue = 42;} ist nicht mehr garantiert ohne Unterbrechung durchgeführt zu werden. Somit könnte der erste thread den ersten Teil des Wertes schreiben, dann unterbrochen werden, der zweite thread die Variable setzen, und danach der erste thread den zweiten Teil des Wertes schreiben. Damit ist der Inhalt von \textit{theValue} nicht vorhersagbar. Atomare Operationen sind vor allem für leistungsorientierte Entwicklung wichtig, da sie einen korrekten Zugriff auf zwischen threads geteilte Ressourcen garantieren ohne dass Sperren verwendet werden müssen.
+\\In .Net gibt es die eigene Klasse \textit{Interlocked}die mehrere Methoden zur Verfügung stellt die garantiert unterbrechungsfrei sind. Da .Net auf mehreren Plattformen zur Verfügung steht sind diese dann entweder mittels atomarer Operationen oder mittels Sperren implementiert.
+\subsubsection{Speicherbarrieren}
+Eine Speicherbarriere ist eine Anweisung an den Compiler und die CPU keine Ablaufoptimierung durch verschieben von Instruktionen über die Barriere hinweg durchzuführen. Es wird also garantiert dass alle Anweisungen vor der Barriere von der CPU tatsächlich vor allen anderen Anweisungen nach der Barriere ausgeführt werden.\cite[S. 195]{tanenbaum2016} Damit kann das in Codebeispiel \ref{lst:thread_3} angeführte Problem behoben werden. In C\# wird eine Speicherbarriere durch den Aufruf von \textit{Interlocked.MemoryBarrier()} realisiert.\cite{ms_interlocked_barrier}
+\subsubsection{Sperren}	
+
+\subsubsection{Monitore}	
+sdfsdf
+
+\section{Relationale Datenbanken}
+asda
+\subsection{Sperren}
+asdas
+\subsection{Isolationsebenen}
+sdfsdf
+
 \chapterend
