@@ -5,7 +5,21 @@
 \chapterstart
 In diesem Kapitel wird die Umsetzung der Anforderungen in die Software erläutert. Es werden dabei besonders die Aspekte der Datenpersistenz, der Concurrency und der Skalierbarkeit vorgestellt.
 \section{Überblick und Architektur}
-asdasd
+Ausgehend von den Anforderungen wurde die Umsetzung des Schedulers\footnote{Die Umsetzung erfolgte unter dem Namen \textit{dJob}.} in Verantwortlichkeiten geteilt:
+\begin{enumerate}
+	\item Die Start-Prozedur
+	\item Die \textit{Worker} die die Umsetzung der Aufgaben übernehmen
+	\item Das Ausführen der Aufgaben \textit{Job} und planen der nächsten Ausführungszeit - der \textit{Scheduler}
+	\item Das Laden von Aufgaben - der \textit{JobLoader}
+\end{enumerate}
+Die Trennung der Umsetzung erfolgte für den Scheduler und den JobLoader durch Interfaces gekapselt (siehe \ref{fig:architecture}). Die Instanziierung der tatsächlichen Klassen erfolgt zur Laufzeit über \textit{dependency injection}\cite{fowler2004}. Damit können diese Teile ausgetauscht werden und in etwa der Scheduler durch einen Echtzeit-fähigen Scheduler ausgetauscht werden ohne am Code selbst etwas ändern zu müssen\footnote{Die Umsetzung der injection dependency erfolgt in der Klasse \textit{ObjectRepository} ebenso um Rahmen dieser Arbeit. Umgesetzt wurde eine von außen konfigurierbare, explizite injection, einem \textit{service locator} nach Fowler. Verwendet wird diese mittels \textit{var service = ObjectRepository.Get<ServiceType().}}.
+\begin{figure}
+	\centering
+	\includegraphics[width=0.7\linewidth]{images/architecture.png}
+	\caption{Architekturübersicht des Schedulers, eigene Darstellung}
+	\label{fig:architecture}
+\end{figure}
+\\
 \section{Datenbank}
 asdasd
 \subsection{Datenbankmodell}
@@ -18,38 +32,23 @@ sdfsfs
 sdsds
 \subsection{Funktionale Skalierung}
 sdsd
-\begin{lstlisting}[caption={Dynamic Loading},label={lst:dynamicloading},captionpos=b]
+\begin{lstlisting}[caption={Dynamic Loading, siehe WorkerRepository.cs - LoadAllWorkers()},label={lst:dynamicloading},captionpos=b]
 foreach ( string file in  workerDirectory.GetFiles( "*.dll" ) )
 {
-	try
-	{
-		Assembly assembly = Assembly.LoadFile( file );
-		logger.LogDebug( "[REPO]    scanning '{0}'", file );
+	Assembly assembly = Assembly.LoadFile( file );
 
-		foreach ( Type typeToLoad in assembly.GetTypes()
-						.Where( t => t.ImplementsInterface<IWorker>() ) )
+	foreach ( Type typeToLoad in assembly.GetTypes()
+					.Where( t => t.ImplementsInterface<IWorker>() ) )
+	{
+		IWorker w = (IWorker)Activator.CreateInstance( typeToLoad );
+
+		w.Initialize( ObjectRepository.Get<IConfigurationProvider>( ), logger );
+
+		if( ! repository.TryAdd( typeToLoad.FullName, w ) )
 		{
-			logger.LogDebug( "[REPO] loading '{0}'", typeToLoad.FullName );
-
-			IWorker w = (IWorker)Activator.CreateInstance( typeToLoad );
-
-			w.Initialize( ObjectRepository.Get<IConfigurationProvider>( ), logger );
-
-			if( ! repository.TryAdd( typeToLoad.FullName, w ) )
-			{
-				throw new InvalidOperationException
-				( $"Could not add class '{typeToLoad.FullName}' to repository");
-			}
+			throw new InvalidOperationException
+			( $"Could not add class '{typeToLoad.FullName}' to repository");
 		}
-	}
-	catch ( Exception x )
-	{
-		logger.LogError( "[REPO] Error loading file '{0}': {1}"
-				, file
-				, x.GetDetailString( ) );
-		sb.AppendLine( $"Error loading file '{file}': {x.GetDetailString()}");
-
-	++errorCount;
 	}
 }
 \end{lstlisting}

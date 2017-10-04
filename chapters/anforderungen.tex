@@ -26,6 +26,7 @@ Im folgenden sind die wichtigsten funktionellen Anforderungen an den Scheduler a
 	\begin{enumerate}
 		\item Der Administrator kann durch Installation der Software einfach weitere Rechner in den Scheduler einbinden. Er braucht dazu keinerlei globale Konfiguration ändern.
 		\item Jeder Rechner kann unterschiedliche Typen von Aufgaben übernehmen. Dadurch ist eine Spezialisierung der Rechner Hardware für einzelne Aufgabentypen möglich.
+		\item Die Umsetzung von weiteren Typen an Aufgaben benötigt keine Änderung am Scheduler. Diese neuen Implementierungen brauchen nur auf den Rechnern installiert werden. Ein Neustart des Schedulers zur Aktivierung ist akzeptabel.
 		\item Die Verteilung von Aufgaben erfolgt automatisch durch den Scheduler.
 		\item Bei einem Ausfall werden die Aufgaben von den verbleibenden Rechnern bestmöglich ausgeführt.
 		\item Die auf dem Rechner zum Zeitpunkt der Deaktivierung bearbeiteten Aufgaben sollen bestmöglich wiederhergestellt und erneut ausgeführt werden.
