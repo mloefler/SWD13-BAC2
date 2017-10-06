@@ -157,7 +157,7 @@ class TestNaiveMutex
 	thread_1.Join(); thread_2.Join();
 }
 \end{lstlisting}
-Über die Variable \textit{stepOneComplete} wird versucht mit dem zweiten thread so lange zu warten (Zeile 15) bis das Ergebnis des ersten thread vorliegt. Das Problem ist hier nicht offensichtlich, da es erst durch das Kompilieren oder durch die CPU selbst entsteht. Alle modernen Compiler oder CPUs versuchen Code zu optimieren, und eine der Strategien dabei ist das Verschieben von Instruktionen ohne Nebenwirkung. Die Verschiebung der Zuweisung in Zeile 11 hätte in einem Programm mit nur einem thread keine Nebenwirkung, diese tritt erst durch den zweiten thread auf, und ist somit durch den Compiler oder die CPU nicht mehr erkennbar.
+Über die Variable \textit{stepOneComplete} wird versucht mit dem zweiten thread so lange zu warten (Zeile 15) bis das Ergebnis des ersten thread vorliegt. Das Problem ist hier nicht offensichtlich, da es erst durch das Kompilieren oder durch die CPU selbst entsteht. Alle modernen Compiler oder CPUs versuchen Code zu optimieren, und eine der Strategien dabei ist das Verschieben von Instruktionen ohne Seiteneffekte innerhalb \textit{eines} threads\cite[S. 100]{ecma335}. Die Verschiebung der Zuweisung in Zeile 11 hätte in einem Programm mit nur einem thread keine Nebenwirkung, diese tritt erst durch den zweiten thread auf, und ist somit durch den Compiler oder die CPU nicht mehr erkennbar.
 \\Die beiden obigen Beispiele haben schon in simplen Codebeispielen gezeigt, dass eine korrekte Umsetzung von Zugriffen auf geteilte Datenstrukturen unumgänglich ist. Dafür stehen Entwicklern folgende Methoden zur Verfügung\cite[S. 170ff]{tanenbaum2016}:
 \begin{itemize}
 	\item Vermeiden von gemeinsamen Datenstrukturen
@@ -168,17 +168,92 @@ class TestNaiveMutex
 \end{itemize}
 \subsubsection{Vermeiden von gemeinsamen Datenstrukturen}	
 Das Vermeiden von gemeinsam genutzten Datenstrukturen ist der sicherste und effizienteste Weg um sich vor race-conditions zu schützen. Bei komplexen Aufgaben kann die Stabilität und Ausführungsgeschwindigkeit drastisch erhöht werden wenn die verwendeten Algorithmen - wo möglich - geändert werden, so dass kein Zugriff auf gemeinsame Datenstrukturen notwendig ist. Auch eine Reduktion der Häufigkeit der Zugriffe auf gemeinsam genutzte Datenstrukturen ist hilfreich. So könnten in etwa Ergebnisse innerhalb eines threads berechnet werden und erst am Ende einmalig mit dem Gesamtergebnis zusammengeführt werden, anstatt Ergebnisse einzelner Rechenschritte in ein Gesamtergebnis zu speichern.
+\\Diese nicht-globalen Daten können
+\begin{enumerate}
+	\item in der thread-main Methode allokiert werden und sind damit am Stack der pro thread angelegt wird.
+	\item oder als \textit{thread specifc data} deklariert werden. Damit werden diese Datenstrukturen durch die .NET-Runtime für jeden thread extra angelegt.
+\end{enumerate}
+
 \subsubsection{Atomare Operationen}	
-Eine atomare Operation ist eine Anweisung die durch die CPU ausgeführt wird und in einem Schritt ohne Unterbrechung durchgeführt wird. Für moderne Architekturen sind das in der Regel Operationen an 32bit Ganzahlwerten. In Codebeispiel \ref{lst:thread_2}  in etwa ist der Wert von \textit{theValue} immer 1 oder 42, aber niemals etwas anderes. Würde der Datentyp in etwa \textit{double}\footnote{Double hat eine Länge von 64 bit} sein, ist die Größe des Datentyps nicht mehr atomar, die einfache Zuweisung \textit{theValue = 42;} ist nicht mehr garantiert ohne Unterbrechung durchgeführt zu werden. Somit könnte der erste thread den ersten Teil des Wertes schreiben, dann unterbrochen werden, der zweite thread die Variable setzen, und danach der erste thread den zweiten Teil des Wertes schreiben. Damit ist der Inhalt von \textit{theValue} nicht vorhersagbar. Atomare Operationen sind vor allem für leistungsorientierte Entwicklung wichtig, da sie einen korrekten Zugriff auf zwischen threads geteilte Ressourcen garantieren ohne dass Sperren verwendet werden müssen.
+Eine atomare Operation ist eine Anweisung die durch die CPU ausgeführt wird und in einem Schritt ohne Unterbrechung durchgeführt wird. Diese Operationen beziehen sich auf Datentype mit der Größe der \textit{native word size} des Prozessors\cite[S. 102]{Ecma335}, derzeit in der Regel 64bit. In Codebeispiel \ref{lst:thread_2}  in etwa ist der Wert von \textit{theValue} immer 1 oder 42, aber niemals etwas anderes. Würde der Datentyp in etwa \textit{double}\footnote{Double hat eine Länge von 64 bit} sein, ist die Größe des Datentyps nicht mehr atomar, die einfache Zuweisung \textit{theValue = 42;} ist nicht mehr garantiert ohne Unterbrechung durchgeführt zu werden. Somit könnte der erste thread den ersten Teil des Wertes schreiben, dann unterbrochen werden, der zweite thread die Variable setzen, und danach der erste thread den zweiten Teil des Wertes schreiben. Damit ist der Inhalt von \textit{theValue} nicht vorhersagbar. Atomare Operationen sind vor allem für leistungsorientierte Entwicklung wichtig, da sie einen korrekten Zugriff auf zwischen threads geteilte Ressourcen garantieren ohne dass Sperren verwendet werden müssen.
 \\In .Net gibt es die eigene Klasse \textit{Interlocked}die mehrere Methoden zur Verfügung stellt die garantiert unterbrechungsfrei sind. Da .Net auf mehreren Plattformen zur Verfügung steht sind diese entweder mittels atomarer Operationen oder mittels Sperren implementiert.
+
 \subsubsection{Speicherbarrieren}
-Eine Speicherbarriere ist eine Anweisung an den Compiler und die CPU keine Ablaufoptimierung durch verschieben von Instruktionen über die Barriere hinweg durchzuführen. Es wird also garantiert dass alle Anweisungen vor der Barriere von der CPU tatsächlich vor allen anderen Anweisungen nach der Barriere ausgeführt werden.\cite[S. 195]{tanenbaum2016} Damit kann das in Codebeispiel \ref{lst:thread_3} angeführte Problem behoben werden. In C\# wird eine Speicherbarriere durch den Aufruf von \textit{Interlocked.MemoryBarrier()} realisiert.\cite{ms_interlocked_barrier}
+Eine Speicherbarriere ist eine Anweisung an den Compiler und die CPU keine Ablaufoptimierung durch verschieben von Instruktionen über die Barriere hinweg durchzuführen. Es wird also garantiert dass alle Anweisungen vor der Barriere von der CPU tatsächlich vor allen anderen Anweisungen nach der Barriere ausgeführt werden.\cite[S. 195]{tanenbaum2016} Damit kann das in Codebeispiel \ref{lst:thread_3} angeführte Problem behoben werden. In C\# wird eine Speicherbarriere durch den Aufruf von \textit{Interlocked.MemoryBarrier()} realisiert.\cite{ms_interlocked_barrier}\footnote{Siehe auch \textit{NaiveMutexBarrier.cs}}
+
 \subsubsection{Sperren}	
 Sperren (locks) bieten eine Möglichkeit sicherzustellen dass nur ein thread innerhalb eines bestimmten Abschnittes des Codes aktiv sein kann. Die Ausführung aller Anweisungen innerhalb des mit einer Sperre geschützten Bereiches wirken auf alle anderen threads \textit{atomar} da immer alle Anweisungen ausgeführt werden bevor ein anderer thread den Code-Block ausführen kann. Dadurch können Veränderungen an Datentypen die nicht atomar sind durchgeführt werden und ein konsistenter Zustand der Daten garantiert werden. 
 \\Die Ausführung von Code innerhalb einer Sperre kann natürlich weiterhin unterbrochen werden und zu einem späteren Zeitpunkt fortgesetzt wird. Versucht ein anderer thread die selbe Sperre für sich zu allokieren, wird der thread unterbrochen und in den Status blockiert gesetzt. Erst wenn die Sperre durch den ersten thread freigegeben wird, setzt das Betriebssystem den thread in den Status wartend. Dadurch steht er für die Ausführung innerhalb einer der nächsten Zeitscheiben bereit. Auch hier gilt, dass der zweite thread nicht sofort nach frei werden der Sperre ausgeführt wird, sondern zu einem beliebigem Zeitpunkt.
 
 \subsubsection{Monitore}	
-sdfsdf
+Mit den bisher vorgestellten Techniken kann ein Programm mit mehreren threads korrekt, also ohne unbeabsichtigte Seiteneffekte durch Manipulation von globalen Daten\footnote{Daten die für mehrere threads sichtbar sind.}  implementiert werden. 
+\\Monitore\footnote{Oder auch \textit{condition} genannt\cite[S. 199]{Dahlin2012}.} bieten die Möglichkeit, dass ein thread auf einen anderen thread wartet. Dies wird in benötigt, wenn ein thread für die Abhandlung der Kommunikation zuständig ist (der sogenannte Erzeuger), und ein anderer thread die Abarbeitung der übermittelten Dateninhalte durchführt (der so genannte Verbraucher). Nur mit den bisher vorgestellten Methoden ist dies nur mittels \textit{polling}, einem ständigen Nachfragen durch den zweiten thread, möglich\footnote{Dies wird Erzeuger-Verbraucher (producer-consumer) Problem genannt\cite[S. 188]{tanenbaum2016}}\cite[S. 199ff]{Dahlin2012}. 
+\begin{lstlisting}[caption={Thread naiver Monitor},label={lst:thread_busywait},captionpos=b]
+public T DequeBusy()
+{
+	bool dequeSuccess = false;
+	T result = default( T );
+
+	while ( !dequeSuccess )
+	{
+		lock ( myLock )
+		{
+			if( backingStore.Any() )
+			{
+				dequeSuccess = true;
+				return backingStore.Dequeue();
+			}
+		}
+	}
+}
+
+\end{lstlisting}
+Diese Implementierung, wie in Codebeispiel \ref{lst:thread_busywait} dargestellt, hat den gravierenden Nachteil dass der thread Rechenleistung verbraucht ohne tatsächliche Arbeit zu verrichten. Dies geschieht durch die Schleife in Zeile 6, die erst verlassen wird wenn tatsächlich wieder Arbeit vorhanden ist. Damit kann dieser eine thread sogar die Ausführung der weiteren threads, also auch des threads der die Arbeit erzeugt, verlangsamen. Das Hinzufügen eines \textit{sleep} Befehls oder eines erzwungenen thread-Wechsel mittels \textit{yield} mildert zwar das Problem der CPU-Belastung, jedoch führen beide Instruktionen zu einem Overhead da die threads in kurzer Zeit gewechselt werden müssen, was auch zu einer hohen CPU Beanspruchung führt.
+\\Monitore bieten nun die Möglichkeit zusammen mit Sperren dies zu lösen. Dazu stellen sie folgende Methoden zur Verfügung:\cite[S. 201]{Dahlin2012}\cite{ms_monitor}
+\begin{itemize}
+	\item \textit{Wait()} - Gibt in einem atomaren Schritt die verbundene Sperre frei und versetzt den thread in den Status blockiert. Damit wird der thread nicht weiter ausgeführt und verbraucht keine CPU-Ressourcen mehr. Der thread wird in der Monitor-Variable als auf diese wartend eingetragen\footnote{in .Net ist dies die Sperrvariable.}. Vor der Rückkehr aus der Methode wird die Sperre wieder gesetzt.
+	\item \textit{Signal()} (in .Net \textit{Pulse()} genannt) - Setzt einen der auf diese Monitor -Variable wartenden threads in den Zustand Wartend, damit wird er gemäß dem Scheduling ausgeführt\footnote{Die Ausführung beginnt nicht sofort, der Zeitpunkt ist abhängig von der Last im System}.
+	\item \textit{Broadcast()} (in .Net \textit{PulseAll()} genannt) - Setzt alle threads die auf diese Monitor-Variable warten in den Zustand Wartend. Damit werden alle diese threads ausgeführt.
+\end{itemize}
+ Damit kann das Codebeispiel \ref{lst:thread_busywait} nun korrekt umgesetzt werden, wie in Codebeispiel\ref{lst:thread_deq} dargestellt.
+\begin{lstlisting}[caption={Thread Monitor.Wait()},label={lst:thread_deq},captionpos=b]
+public T Dequeue()
+{
+	lock( myLock )
+	{
+
+		while ( ! backingStore.Any() )
+		{
+			Monitor.Wait( myLock );
+		}
+
+		return backingStore.Dequeue();
+	}
+}
+\end{lstlisting}
+In Zeile 8 wird der thread solange unterbrochen bis der Monitor von einem anderen thread signalisiert wird. Die Sperre ist vor dem Eintritt in das Wait() gesetzt. Die Schleife in Zeile 6 hat mehrere Aufgaben. Wenn schon Arbeit existiert, wird diese ohne weiteres Wait() abgearbeitet. Dies ist notwendig, da ein vorhergehendes \textit{Pulse} nicht auf der Monitor-Variable vermerkt wird. Würde also Wait() ohne Prüfung aufgerufen werden, so würde der thread unterbrochen werden obwohl Arbeit vorhanden wäre. Desweiteren wird nachdem \textit{Wait()} verlassen wird wieder geprüft ob tatsächlich Arbeit vorhanden ist. Dies ist notwendig, denn wenn es mehrere Verbraucher gibt kann die von einem anderen thread erzeugte Arbeit bereits durch einen anderen thread abgearbeitet sein. Der dann durch das \textit{Pulse()} aufgeweckte thread findet dann keine weitere Arbeit mehr vor. Dies ist in Ablaufdiagram \ref{} dargestellt.
+DIAGRAMM
+\\Der Erzeuger ist in Codebeispiel \ref{lst:thread_enq} dargestellt. Nachdem die Sperre gesetzt wird, wird die neue Arbeit in Zeile 5 eingetragen und in Zeile 7 wird die Monitor-Variable ausgelöst, was zu einer - zeitlich verzögerten - Aktivierung eines Verbraucher-threads führt. Die Sperre wird während des Aufrufes von \textit{Pulse()} nicht modifiziert, sie bleibt erhalten.
+\begin{lstlisting}[caption={Thread Monitor.Pulse()},label={lst:thread_enq},captionpos=b]
+public void Enque( T newElement )
+{
+	lock( myLock )
+	{
+		backingStore.Enqueue( newElement );
+
+		Monitor.Pulse( myLock );
+	}
+}
+\end{lstlisting}
+\subsection{Zusammenfassung}
+Threads stellen eine wichtigen Baustein der Programmierung dar, vor allem wen es darum geht performante Programme zu entwickeln die komplexe Aufgabenstellungen zu bewältigen haben. Threads werden oft von eingesetzten Frameworks verwendet und vom Entwickler versteckt, daher ist ein Grundwissen für alle Entwickler notwendig. 
+\\Die essentiellen Punkte wenn es um Concurrency geht sind
+\begin{itemize}
+	\item sich dessen bewusst zu sein welche Daten global, also für mehrere threads sichtbar sind, und wie diese zu schützen sind. 
+	\item sich bewusst zu sein, dass es keine Garantien für Zeitpunkte gibt. Jeder thread kann zu jedem Zeitpunkt, auch innerhalb einer Sperre, unterbrochen werden und erst zu einem späteren, nicht vorhersehbarem Zeitpunkt fortgesetzt werden.
+	\item zu wissen, das das Starten oder Aufwecken eines threads nicht sofort erfolgt, sonder auch erst zu einem späterem, durch das Betriebssystem festgelegten Zeitpunkt.
+\end{itemize}
+
 
 \section{Relationale Datenbanken}
 asda
