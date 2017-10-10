@@ -236,11 +236,11 @@ In Zeile 8 wird der thread solange unterbrochen bis der Monitor von einem andere
 \begin{figure}
 	\centering
 	\includegraphics[width=0.9\linewidth]{images/uml-sequence_pulse.png}
-	\caption{Erzeuger/ Verbraucher Modell - Ablauf \cite[S. 405]{posa2}}
+	\caption{Erzeuger/ Verbraucher Modell - Ablauf \cite[S. 405]{posa2} }
 	\label{fig:threads_pcs}
 \end{figure}
 
-\\Der Erzeuger ist in Codebeispiel \ref{lst:thread_enq} dargestellt. Nachdem die Sperre gesetzt wird, wird die neue Arbeit in Zeile 5 eingetragen und in Zeile 7 wird die Monitor-Variable ausgelöst, was zu einer - zeitlich verzögerten - Aktivierung eines Verbraucher-threads führt. Die Sperre wird während des Aufrufes von \textit{Pulse()} nicht modifiziert, sie bleibt erhalten.
+Der Erzeuger ist in Codebeispiel \ref{lst:thread_enq} dargestellt. Nachdem die Sperre gesetzt wird, wird die neue Arbeit in Zeile 5 eingetragen und in Zeile 7 wird die Monitor-Variable ausgelöst, was zu einer - zeitlich verzögerten - Aktivierung eines Verbraucher-threads führt. Die Sperre wird während des Aufrufes von \textit{Pulse()} nicht modifiziert, sie bleibt erhalten.
 \begin{lstlisting}[caption={Thread Monitor.Pulse()},label={lst:thread_enq},captionpos=b]
 public void Enque( T newElement )
 {
