@@ -3,3 +3,9 @@ SWD13_BAC1_LOEFLER.pdf
 *.aux
 bachelor-thesis.out
 bachelor-thesis.toc
+bachelor-thesis.blg
+bachelor-thesis.bbl
+bachelor-thesis.lof
+bachelor-thesis.lol
+bachelor-thesis.run.xml
+bachelor-thesis.synctex.gz
