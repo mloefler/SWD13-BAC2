@@ -268,7 +268,31 @@ Datenbanken sind Systeme in denen große Datenmengen effizient gespeichert und v
 \\Bei relationalen Datenbanken werden die Informationen nach thematischer Zusammengehörigkeit in so genanten Tabellen gespeichert.\footnote{\emph{Relational} wird in seiner mathematischen Bedeutung verwendet.} Diese Art von Datenbanken wurde erstmals von Edgar F. Codd vorgestellt und galt bis vor wenigen Jahren als alleiniger Standard für Datenbanken. \cite[S. 133]{dbgrund}. Erst durch die immensen Datenmengen der Big-Data wurde für diese Anwendung die so genannten \emph{No-SQL}\footnote{\emph{N}ot \emph{O}nly \emph{SQL}, diese Datenbanken stellen weitere Formen der Speicherung wie schemenlose Dokument-Datenbanken, Wertepaare oder Graphdatenbanken zur Verfügung. CITATION } Datenbanken eingeführt. Bei diesen werden einige der unten Beschriebenen strengen Regeln der Datenstruktur und Datenkonsistenz aufgehoben um eine höhere Leistung zu erreichen.
 \\Bei relationalen Datenbanken werden thematisch Zusammengehörige Daten in einer Tabelle gespeichert. Jede Datenbank umfasst mehrerer solcher Tabellen. Jede Tabelle enthält Datensätze, so genannte \emph{Tupel}. Jeder dieser Tupel besteht aus immer den selben \emph{Attributen}, die beschreiben welche Daten die Tabelle enthält. Tabellen sind also eine Zusammensetzung aus der Beschreibung der Struktur der Daten und den Daten selbst. Die Beschreibung der Struktur der Daten wird auch \emph{Schema} oder \emph{Katalog} genannt.
 \\Ein Beispiel für eine Tabelle ist die Tabelle 'Student', die die Attribute Vorname, Nachname, Matrikelnummer und Geburtsjahr enthält. Ein Datensatz darin ist dann zum Beispiel 'Max', 'Mustermann', '4711', '1980'.\cite[S. 137]{dbgrund} \cite{DBLP:journals/cacm/Codd70}
-\\Die von Codd vorgeschlagene Trennung in Benutzersicht und Speicherung hat nun den Vorteil dass der Student (Vorname: 'Max', Nachname: 'Mustermann') durch Änderung der Beschreibung der Sicht auch als Student( Nachname: 'Mustermann', Geburtsjahr: '1980') dargestellt werden kann.\footnote{Dies wird auch \emph{Projektion} genannt, eine Änderung der Darstellung ohne Änderung der zugrundeliegenden Daten}
+\\Die von Codd vorgeschlagene Trennung in Benutzersicht und Speicherung hat nun den Vorteil dass der Student (Vorname: 'Max', Nachname: 'Mustermann') durch Änderung der Beschreibung der Sicht auch als Student( Nachname: 'Mustermann', Geburtsjahr: '1980') dargestellt werden kann.\footnote{Dies wird auch \emph{Projektion} genannt, eine Änderung der Darstellung ohne Änderung der zugrundeliegenden Daten\cite[S. 152]{dbgrund} }
+\\Bei relationalen Datenbanken hat sich als Standard für die Manipulation des Schemas und der Daten die SQL\footnote{\emph{S}tructured \emph{[Q}uery \emph{L}anguage, genormt nach der ISO/ IEC 19075 Standard-Familie der von allen relationalen Datenbanksystemen unterstützt wird\cite{ocl_sql}\cite{isosql}\footnote{Jeweils mit eigenen, unterschiedlich mächtigen Erweiterungen um den Anwendungsentwicklern einen Austausch des zugrundeliegenden Systems zu erschweren}} etabliert. Mit deren Hilfe können\cite[S. 182]{dbgrund}
+\begin{itemize}
+	\item Schemata verwaltet werden. Dieser Teil der Sprache wird auch \emph{Data Manipulation Language (DML)} genannt. Er enthält Befehle um 
+	\begin{itemize}
+		\item Tabellen anzulegen
+		\item Tabellen zu modifizieren
+		\item Tabellen zu löschen und
+		\item Beschränkungen anzulegen und zu löschen.
+	\end{itemize}
+	\item Daten verwaltet werden. Dieser Teil der Teil der Sprache wird auch \emph{Data Definition Language (DDL)} genannt. Er enthält Befehle um
+	\begin{itemize}
+		\item Datensätze anzulegen
+		\item Datensätze auszulesen
+		\item Datensätze zu modifizieren und
+		\item Datensätze zu löschen.
+	\end{itemize}
+\end{itemize} werden.
+Zusätzlich zu dieser Standardisierung des Zugriffes bieten relationale Datenbanksysteme weitere Garantien die das Arbeiten mit großen Datenmengen vereinfachen. Diese Garantien beziehen sich auf Veränderungen von Daten die in so genannten \emph{Transaktionen} durchgeführt werden. Eine Transaktion beinhält dabei alle Veränderungen an Daten die als Einheit durchgeführt werden sollen. Entweder werden alle Veränderungen erfolgreich durchgeführt, oder aber keine einzige der Veränderungen innerhalb einer Transaktion wird durchgeführt. Diese Garantien werden auch als \emph{ACID} bezeichnet:\cite[S. 6fs]{GrayReuter93}
+\begin{itemize}
+	\item \emph{Atomic} (Atomar) - Die Veränderungen die eine Transaktion am Datenbestand durchführt sind atomar, sie werden also alle durchgeführt oder keine der Veränderungen findet statt.
+	\item \emph{Consistent} (Konsistent) - Die Transaktion ist eine innerhalb der im Schema definierten Regeln gültige Veränderung der Daten. Die Daten sind am Ende der Transaktion in einem gültigen und konsistenten Zustand.
+	\item \emph{Isolated} (Isoliert) - Transaktionen laufen unabhängig voneinander ab, obwohl sie zeitgleich laufen können. Eine zweite Transaktion findet entweder komplett vor oder komplett nach einer Transaktion statt.
+	\item \emph{Durable} (Dauerhaft) - Wenn eine Transaktion erfolgreich abgeschlossen wurde, ist die Veränderung dauerhaft gespeichert, auch wenn es danach zu Fehlern oder Abstürzen kommt.
+\end{itemize}
 \subsection{Sperren}
 asdas
 \subsection{Isolationsebenen}
