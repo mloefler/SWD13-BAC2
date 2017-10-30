@@ -16,8 +16,8 @@ Ebenso sind beide Scheduler darauf ausgelegt komplette Programme, also \emph{exe
 Für den Fall der umzusetzen war stellten diese beiden Herausforderung ein großes Hindernis dar. Nach der Anforderungsanalyse und einer Machbarkeitsstudie wurde daher entschieden einen eigenen Scheduler umzusetzen.
 
 \section{Beispielhafte Verwendung}
-Eines der Hauptthemen in der Industrie 4.0 ist die Einbindung von Sensoren in EDV Systeme um durch deren Daten einerseits Informationen zu aktuellen (Betriebs-) Zuständen zu erhalten und andererseits durch die Sammlung der Daten mithilfe von Big-Data Algorithmen weitere Schlussfolgerungen ziehen zu können.\cite[S. 36ff]{Manzei2015}\\
-Dabei wird in der Regel stillschweigen von der neuesten Generation von Sensoren ausgegangen, die ihrerseits aktiv Daten in die Cloud publizieren.\footnote{Siehe zum Beispiel \cite{ms_azureiot} "...the device sends..."} Diese Sensoren sind aktiv und lösen somit die weitere Verarbeitung der Daten aus. Es ist keine Aktivierung von Außen notwendig.\\
+Eines der Hauptthemen in der Industrie 4.0 ist die Einbindung von Sensoren in EDV Systeme um durch deren Daten einerseits Informationen zu aktuellen (Betriebs-) Zuständen zu erhalten und andererseits durch die Sammlung der Daten mithilfe von Big-Data Algorithmen weitere Schlussfolgerungen ziehen zu können.\parencite[S. 36ff]{Manzei2015}\\
+Dabei wird in der Regel stillschweigen von der neuesten Generation von Sensoren ausgegangen, die ihrerseits aktiv Daten in die Cloud publizieren.\footnote{Siehe zum Beispiel \parencite{ms_azureiot} "...the device sends..."} Diese Sensoren sind aktiv und lösen somit die weitere Verarbeitung der Daten aus. Es ist keine Aktivierung von Außen notwendig.\\
 Viele der derzeit bestehenden Sensoren sind allerdings passiv und stellen ihre Daten nur nach Nachfrage zur Verfügung. Die Daten dieser Sensoren müssen also periodisch abgefragt und an die weiterverarbeitenden Prozesse weitergereicht werden.\\
 In der beispielhaften Verwendung geht es darum Standbilder von bereits bestehenden Überwachungskameras zu Dokumentationszwecken in einem Archiv abzulegen. Die Anzahl der Kameras beträgt in etwa 1.000 und wird mit der Zeit deutlich steigen, damit muss das System frei skalieren.\\ 
 \section{Ziele der Arbeit}
@@ -30,7 +30,7 @@ Für die Umsetzung des Schedulers - und in folge auch der Implementierung der ei
 	\item Microsoft .NET 4.6
 	\item Microsoft C\# 7
 	\item Microsoft Visual Studio 2017 Express Edition
-	\item Microsoft Entity Framework 6 als ORM Schicht\footnote{object-relational mapping, eine Bibliothek die den Zugriff auf eine relationale Datenbank sowie die Abbildung der Daten in Klassen und Instanzen implementiert. Vgl. \cite{ef_orm} }
+	\item Microsoft Entity Framework 6 als ORM Schicht\footnote{object-relational mapping, eine Bibliothek die den Zugriff auf eine relationale Datenbank sowie die Abbildung der Daten in Klassen und Instanzen implementiert. Vgl. \parencite{ef_orm} }
 	\item Microsoft SQL Server 2016 als Datenbank
 \end{itemize}
 Die Auswahl wurde einerseits durch meinen bisherige Erfahrung mit .NET / C\# geprägt, anderseits spielten vor allem folgende Faktoren eine entscheidende Rolle:
@@ -40,4 +40,54 @@ Die Auswahl wurde einerseits durch meinen bisherige Erfahrung mit .NET / C\# gep
 	\item Hohe Ausführungsgeschwindigkeit unter Microsoft Windows
 	\item Mögliche Portierbarkeit auf andere Betriebssysteme mittels Microsoft .Net Core das zu diesem Zeitpunkt bereits in einer ersten Version zur Verfügung steht.
 \end{itemize}
+\section{Anforderungen}\label{chap:Anforderungen}
+\subsection{Allgemein}
+Wie schon Eingangs erwähnt, soll das System Bilder in regelmäßigen Abständen von Kameras abholen und diese auf einem Archivserver speichern. Die Abholung erfolgt dabei - je nach Standort der Kamera - einmal alle Stunden oder einmal jede Minute.\\
+Da die Kameras getauscht werden und neue Kameras hinzukommen ist es notwendig, dass die Einrichtung der einzelnen Aufgaben für den Benutzer einfach und auch während des Betriebes erfolgen kann.\\
+Die im folgenden angeführten Anforderungen sind vom System auf alle Fälle zu erfüllen. Die Anforderungen sind hierarchisch dargestellt und auf Spezifikationsebene 1 und 2 beschränkt\parencite[S. 45]{rupp2009}.
+\subsection{Funktionelle Anforderungen}
+Im folgenden sind die wichtigsten funktionellen Anforderungen an den Scheduler angeführt:
+\begin{enumerate}
+	\item Der Benutzer kann Aufgaben im Scheduler anlegen
+	\begin{enumerate}
+		\item Der Benutzer kann eine Aufgabe eines bestimmten Typs mit einem bestimmten Kontext (Konfiguration) anlegen.
+		\item Der Scheduler kann beliebig viele Aufgaben verwalten und diese bestmöglich zum geforderten Zeitpunkt erledigen. Die Anzahl der Aufgaben muss dabei zumindest größer als 10.000 sein.
+		\item Als Benutzer kann ich für jede Aufgabe ein oder mehrere Zeitpläne festlegen in dem die Aufgabe abgearbeitet wird. Der Zeitplan muss folgende Einteilungen zulassen:
+		\begin{enumerate}
+			\item Einmal zu einem festgelegtem Zeitpunkt
+			\item Periodisch alle x Sekunden
+			\item Stündlich
+			\item Täglich zu einer festgelegten Uhrzeit
+			\item Wöchentlich an einem festgelegtem Tag und einer festgelegten Uhrzeit
+		\end{enumerate}
+	\end{enumerate}
+	\item Der Scheduler kann die Aufgaben auf mehrere Rechner verteilt ausführen.
+	\begin{enumerate}
+		\item Der Administrator kann durch Installation der Software einfach weitere Rechner in den Scheduler einbinden. Er braucht dazu keinerlei globale Konfiguration ändern.
+		\item Jeder Rechner kann unterschiedliche Typen von Aufgaben übernehmen. Dadurch ist eine Spezialisierung der Rechner Hardware für einzelne Aufgabentypen möglich.
+		\item Die Umsetzung von weiteren Typen an Aufgaben benötigt keine Änderung am Scheduler. Diese neuen Implementierungen brauchen nur auf den Rechnern installiert werden. Ein Neustart des Schedulers zur Aktivierung ist akzeptabel.
+		\item Die Verteilung von Aufgaben erfolgt automatisch durch den Scheduler.
+		\item Bei einem Ausfall werden die Aufgaben von den verbleibenden Rechnern bestmöglich ausgeführt.
+		\item Die auf dem Rechner zum Zeitpunkt der Deaktivierung bearbeiteten Aufgaben sollen bestmöglich wiederhergestellt und erneut ausgeführt werden.
+	\end{enumerate}
+	\item Der Scheduler führt die Aufgaben möglichst nahe am geplanten Zeitpunkt aus.
+	\begin{enumerate}
+		\item Der Scheduler muss nicht echtzeitfähig sein, eine Abweichung der tatsächlichen Ausführungszeitpunkten gegenüber den vorgegebenen Zeitpunkten ist erlaubt. Die Aufgaben sollten jedoch mit einer möglichst geringen Abweichung zu den definierten Zeitpunkten abgearbeitet werden.
+	\end{enumerate}
+	\item Der Benutzer erhält Information über den aktuellen Status des Schedulers
+	\begin{enumerate}
+		\item Der Benutzer sieht welche Aufgaben im System definiert sind.
+		\item Der Benutzer sieht wann welche Aufgaben zuletzt ausgeführt wurden und wann sie wieder geplant sind.
+		\item Der Benutzer sieht den Status der einzelnen Ausführungen der Aufgaben und kann Fehler erkennen.
+	\end{enumerate}
+\end{enumerate}
+\subsection{Technische Anforderungen}
+Im folgenden sind die wichtigsten technischen Anforderungen an den Scheduler angeführt:
+\begin{enumerate}
+	\item Der Scheduler muss unter Microsoft Windows Server lauffähig sein.
+	\item Die Aufgaben sind als Klassen definiert.
+	\item Die auf einem Rechner zur Verfügung stehenden Klassen müssen ohne Anpassung des Scheduler Codes oder der Konfiguration änderbar sein.
+	\item Der Scheduler kann mehrere Aufgaben pro Rechner gleichzeitig verarbeiten. Eine Synchronisation gegenüber den Ressourcen die von den Aufgaben benötigt werden ist nicht in der Verantwortung des Schedulers.
+	\item Der Administrator kann die Anzahl der Prozessoren die pro Rechner für den Scheduler verwendet werden konfigurieren.
+\end{enumerate}
 \chapterend

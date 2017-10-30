@@ -1,12 +1,10 @@
 \selectlanguage{german}
-\chapter{Anforderungen}\label{chap:Anforderungen}
-\chapterstart
-In diesem Kapitel stelle ich die Anforderungen an das System vor. Der Fokus liegt bei den für das Thema relevanten Anforderungen, es wird keine vollständige Anforderungsanalyse durchgeführt.
-\section{Allgemein}
+\section{Anforderungen}\label{chap:Anforderungen}
+\subsection{Allgemein}
 Wie schon Eingangs erwähnt, soll das System Bilder in regelmäßigen Abständen von Kameras abholen und diese auf einem Archivserver speichern. Die Abholung erfolgt dabei - je nach Standort der Kamera - einmal alle Stunden oder einmal jede Minute.\\
 Da die Kameras getauscht werden und neue Kameras hinzukommen ist es notwendig, dass die Einrichtung der einzelnen Aufgaben für den Benutzer einfach und auch während des Betriebes erfolgen kann.\\
-Die im folgenden angeführten Anforderungen sind vom System auf alle Fälle zu erfüllen. Die Anforderungen sind hierarchisch dargestellt und auf Spezifikationsebene 1 und 2 beschränkt\cite[S. 45]{rupp2009}.
-\section{Funktionelle Anforderungen}
+Die im folgenden angeführten Anforderungen sind vom System auf alle Fälle zu erfüllen. Die Anforderungen sind hierarchisch dargestellt und auf Spezifikationsebene 1 und 2 beschränkt\parencite[S. 45]{rupp2009}.
+\subsection{Funktionelle Anforderungen}
 Im folgenden sind die wichtigsten funktionellen Anforderungen an den Scheduler angeführt:
 \begin{enumerate}
 	\item Der Benutzer kann Aufgaben im Scheduler anlegen
@@ -42,7 +40,7 @@ Im folgenden sind die wichtigsten funktionellen Anforderungen an den Scheduler a
 		\item Der Benutzer sieht den Status der einzelnen Ausführungen der Aufgaben und kann Fehler erkennen.
 	\end{enumerate}
 \end{enumerate}
-\section{Technische Anforderungen}
+\subsection{Technische Anforderungen}
 Im folgenden sind die wichtigsten technischen Anforderungen an den Scheduler angeführt:
 \begin{enumerate}
 	\item Der Scheduler muss unter Microsoft Windows Server lauffähig sein.
