@@ -301,18 +301,45 @@ Um die oben angeführten \emph{ACID} Eigenschaften sicherzustellen auch wenn meh
 	\item Sperren auf Seiten- oder Block-Ebene - Seiten sind Konstrukte innerhalb des Datenbanksystems welche eine Menge von Datensätzen bündeln die in einer Einheit auf den Datenträger gespeichert werden. Die Seiten können nochmals zu größeren Einheiten, den Blöcken zusammengefasst werden.\footnote{Die Historisierung und damit die kontrollierte Veränderung der Daten wird von den meisten Datenbanksysteme ebenfalls über diese Einheiten abgebildet. Wenn es neuere Daten gibt, so wird - stark vereinfacht - der Block kopiert, die Daten in der Kopie aktualisiert und zuletzt ein Verweis im bisherigen Block auf den neuen Block gesetzt.}\parencite[S. 30f]{WeikumVossen02} Da immer die gesamte Einheit gelesen und geschrieben wird, ist eine Sperre auf eine solche Einheit für das Datenbanksystem sehr effizient durchzuführen. Ist so eine Sperre gesetzt, kann nur mehr eine Transaktion eine Veränderung an allen Datensätzen in dieser Einheit durchführen.
 	\item Sperren auf Datensatzebene - Es kann nur mehr eine Transaktion die Inhalte eines Datensatzes ändern. Dies ist in der Regel die feinste Granularität an Sperren die ein Datenbanksystem bietet.
 	\item Optimistische Sperren - Beim optimistischem Sperren handelt es sich nicht um eine Sperre die innerhalb der Datenbank umgesetzt wird, sondern um eine Methodik die in Anwendungsprogrammen umgesetzt werden muss. Dabei werden die Daten ohne Sperre gelesen und verarbeitet. Beim Schreiben von Änderungen erst wird der Datensatz gesperrt und die Inhalte aktualisiert. Dadurch wird die Dauer in der der Datensatz gesperrt ist auf das bloße Schreiben der Änderungen beschränkt. Um sicherzustellen dass keine Änderungen in der Zwischenzeit vorgenommen wurden, muss beim Aktualisieren nicht nur der Schlüssel des Datensatzes, sondern auch eine \emph{Identität}. Diese wird bei jeder Änderung verändert\footnote{meist ein Zähler der Inkrementiert wird}, dadurch kann der Datensatz nur verändert werden wenn sich der Inhalt nicht verändert hat. Das Anwendungsprogramm muss allerdings ein Scheitern des Updates behandeln.\parencite[S. 366]{WeikumVossen02}
+	\begin{figure}
+		\centering
+		\includegraphics[width=0.7\linewidth]{images/optimistic_lock.png}
+		\caption{Ablauf optimistische Sperren, eigene Darstellung}
+		\label{fig:optimistic_locking}
+	\end{figure}
 \end{itemize}
 Die Granularität der Sperre wird in der Regel durch das Datenbanksystem festgelegt und im Verlauf der Transaktion wenn nötig angepasst. Eine Transaktion kann zum Beispiel mit einer Datensatzsperre beginnen, wenn im Verlauf der Transaktion mehrere aufeinanderfolgende Datensätze geändert werden wird die Sperre auf eine Seiten- oder Block-Sperre erweitert.\parencite[S. 366f]{WeikumVossen02}
 \\Wenn eine zweite Transaktion Datensätze ändern will die gesperrt sind, so wird diese Transaktion blockiert, solange bis die Sperre gesetzt werden kann - frühestens also dann wenn die Sperre von der ersten Transaktion aufgehoben wird. Werden nun zwei Datensätze, Satz A und B gesperrt, und von einer zweiten Transaktion die gleichen Datensätze, allerdings in der Reihenfolge B,A kann es zu einem \emph{Deadlock} kommen. In der ersten Zeitscheibe wird von der ersten Transaktion Datensatz A und von der zweiten Datensatz B gesperrt. In der darauffolgenden Zeitscheibe versucht nun die erste Transaktion B zu sperren und wird blockiert, die zweite Transaktion versucht A zu sperren und wird blockiert. Beide Transaktionen sind nun blockiert und können nicht mehr fortgesetzt werden da die Ressourcen kreuzweise gesperrt sind und  durch die Blockade beider Transaktionen nicht mehr freigegeben werden.\parencite[S. 138]{WeikumVossen02}
 \\Die einfachste Methode dies aufzulösen ist dass die Transaktion die am längsten blockiert nach Ablauf einer definierten Zeit abgebrochen wird. Dadurch wird die Sperre auf Datensatz A aufgehoben und die zweite Transaktion kann erfolgreich beendet werden.\parencite[S. 139ff]{WeikumVossen02}
-\begin{figure}
+\\Um Deadlocks von vorne herein zu Vermeiden sollten Ressourcen immer in der selben Reihenfolge allokiert werden. Die zweite Transkation könnte dann schon Datensatz A nicht sperren, würde blockieren und die ersten Transaktion könnte vollständig abgearbeitet werden wodurch die zweite dann ebenso durchlaufen kann.
+
+
+\subsection{Probleme durch mehrere Transaktionen}
+Beim gleichzeitigen Lesen und Schreiben von Daten durch mehrere Transaktionen kann es zu vier grundlegenden Problemen kommen:
+\begin{itemize}
+	\item \emph{Lost Update} - bei einem Lost Update lesen zwei Transaktionen einen Datensatz, verändern den Inhalt eines Feldes und schreiben den Datensatz zurück. Die Änderung die dabei zuletzt durchgeführt wurde bleibt bestehen, die Änderung durch frühere Transaktion geht dabei verloren. Dies kann in etwa vorkommen wenn ein Datensatz einem Benutzer angezeigt wird und dieser danach eine Änderung vornimmt und speichert. Der Datensatz ist dabei in der Regel nicht mehr von der Datenbank gesperrt und daher nicht durch grundlegende Mechanismen geschützt. Wenn nun beim Speichern nicht geprüft wird ob der Datensatz in der Datenbank verändert wurde, so gehen Änderungen durch andere Benutzer oder Systeme die in der Zeit seit dem Laden des Datensatzes vorgenommen wurden, verloren.\parencite[S. 415f]{dbgrund}
+	\item \emph{Dirty Read} - Dabei wird durch eine Transaktion T1 eine Änderung an einem Datensatz durchgeführt, aber noch nicht commited. Eine Transaktion T2 liest nun den schon geänderten Wert und danach wird Transaktion T1 abgebrochen. Damit hat T2 einen Wert in einem Datensatz gelesen der nicht commited war. In der Regel wird dies durch Datenbanksysteme verhindert, jedoch kann man dies zur Leistungssteigerung bewusst umgehen. Damit muss ein dirty read in der Programmlogik abgefangen werden.\parencite[S. 439]{dbgrund}
+	\item \emph{Unrepeatable Read} - Wenn eine Transaktion einen Datensatz liest, kann eine andere Transaktion den gelesenen Datensätze verändern und committen. Führt nun die erste Transaktion die Abfrage erneut aus, so erhält sie andere Werte innerhalb des Datensatzes. Das Lesen ist damit nicht garantiert wiederholbar.\parencite[S. 439]{dbgrund}
+	\item \emph{Phantom Read} - Wenn eine Transaktion eine Abfrage ausführt die Bedingungen enthält, so kann eine andere Transaktion Datensätze einfügen die der Abfrage enstprechen. Führt die erste Transaktion die Abfrage erneut aus, so erhält sie nun Datensätze die zuerst nicht enthalten waren, so genannte Phantome.\parencite[S. 439]{dbgrund}	
+\end{itemize}
+Die Lösung auf die letzen drei Probleme ist in den meisten relationalen Datenbanken Standard und kann über die Nutzung der \emph{Isolationstufen} gesteuert werden. Im SQL Standard sind folgende vier Isolationsstufen definiert:
+\begin{table}[]
 	\centering
-	\includegraphics[width=0.7\linewidth]{images/optimistic_lock.png}
-	\caption{Ablauf optimistische Sperren, eigene Darstellung}
-	\label{fig:optimistic_locking}
-\end{figure}
-
-\subsection{Isolationsebenen}
-sdfsdf
-
+\begin{tabular}{|l|c|c|c|}
+	\hline 
+	\textbf{Isolationsstufe}& \textit{Dirty Read} & \textit{Unrepeatable Read} & \textit{Phantom Read} \\ 
+	\hline 
+	\textit{READ UNCOMMITED}& Ja & Ja & Ja \\ 
+	\hline 
+	\textit{READ COMMITED}& Nein & Ja  & Ja \\ 
+	\hline 
+	\textit{REPEATABLE READ}& Nein & Nein & Ja \\ 
+	\hline 
+	\textit{SERIALIZABLE}& Nein & Nein & Nein \\ 
+	\hline 
+\end{tabular} 
+\caption{Standard SQL Isolationsstufen, siehe \parencite[S. 440]{dbgrund}}
+\label{table:isolationlevel}
+\end {table}
+Tabelle \ref{table:isolationlevel} zeigt die vier Isolationsstufen und die Probleme die sie vermeiden. Mit diesen Isolationsstufen kann eine grundlegende Funktion bei nebenläufigen Anwendungen schon auf Ebene des Datenbanksystems sichergestellt werden und muss somit nicht mehr in den einzelnen Applikationen abgehandelt werden. Besteht aber dennoch der Bedarf eine andere Isolationsstufe zu verwenden, so kann für eine Transaktion diese geändert werden.\footnote{Beim verwendeten SQL Server ist die Standard Isolationsstufe READ COMMITED\parencite{ms_isolation}}
 \chapterend
