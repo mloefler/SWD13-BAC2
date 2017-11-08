@@ -12,25 +12,44 @@ Ausgehend von den Anforderungen wurde die Umsetzung des Schedulers\footnote{Die 
 	\item Das Ausführen der Aufgaben \textit{Job} und planen der nächsten Ausführungszeit - der \textit{Scheduler}
 	\item Das Laden von Aufgaben - der \textit{JobLoader}
 \end{enumerate}
-Die Trennung der Umsetzung erfolgte für den Scheduler und den JobLoader durch Interfaces gekapselt (siehe \ref{fig:architecture}). Die Instanziierung der tatsächlichen Klassen erfolgt zur Laufzeit über \textit{dependency injection}\cite{fowler2004}. Damit können diese Teile ausgetauscht werden und in etwa der Scheduler durch einen Echtzeit-fähigen Scheduler ausgetauscht werden ohne am Code selbst etwas ändern zu müssen\footnote{Die Umsetzung der injection dependency erfolgt in der Klasse \textit{ObjectRepository} ebenso um Rahmen dieser Arbeit. Umgesetzt wurde eine von außen konfigurierbare, explizite injection, einem \textit{service locator} nach Fowler. Verwendet wird diese mittels \textit{var service = ObjectRepository.Get<ServiceType().}}.
+Die Trennung der Umsetzung erfolgte für den Scheduler und den JobLoader durch Interfaces gekapselt (siehe \ref{fig:architecture}). Die Instanziierung der tatsächlichen Klassen erfolgt zur Laufzeit über \textit{dependency injection}\cite{fowler2004}. Damit können diese Teile ausgetauscht werden und in etwa der Scheduler durch einen Echtzeit-fähigen Scheduler ausgetauscht werden ohne am Code selbst etwas ändern zu müssen\footnote{Die Umsetzung der injection dependency erfolgt in der Klasse \textit{ObjectRepository} ebenso um Rahmen dieser Arbeit. Umgesetzt wurde eine von außen konfigurierbare, explizite injection, einem \textit{service locator} nach Fowler. Verwendet wird diese mittels \code{var service = ObjectRepository.Get<ServiceType().}}.
 \begin{figure}
 	\centering
 	\includegraphics[width=0.7\linewidth]{images/architecture.png}
 	\caption{Architekturübersicht des Schedulers, eigene Darstellung}
 	\label{fig:architecture}
 \end{figure}
-Nach dem Start und der Initialisierung werden die Tasks die als nächstes ausgeführt werden sollen durch den JopLoader geladen und für andere Instanzen gesperrt. Dies geschieht durch das setzen des aktuellen Servers im Job ()
+Nach dem Start und der Initialisierung werden die Tasks die als nächstes ausgeführt werden sollen durch den JobLoader geladen und für andere Instanzen gesperrt. Dies geschieht durch das setzen des aktuellen Servers im Job (\code{Job.AllocatedTo}). Damit werden diese Jobs von anderen Instanzen ignoriert. Die Jobs werden dann in die interne Warteschlange (\code{pendingWork}) eingetragen.
+\\Die Jobs in der Warteschlange werden durch die einzelnen Threads abgeholt, verarbeitet und die Job-Daten inklusiver dem Zeitpunkt der nächsten Ausführung in der Datenbank aktualisiert.
+\\Die Verarbeitung selbst wird durch die Implementation des \code{IWorker} der für den Job vorgesehen ist (\code{Job.Worker}) erledigt. Welche Arbeiten verrichtet werden ist dem System nicht bekannt. Diese Worker werden durch den Klassennamen identifiziert und beim Starten des Systems aus dynamischen Bibliotheken geladen und instantiiert (siehe Kapitel \ref{sec:dynload}).
+
 \section{Datenbank}
-asdasd
+Die Datenbank dient zur Speicherung aller notwendigen Daten. Es werden - ausgenommen Ablaufprotokolle - keine Daten anderswo gespeichert. Damit sind die Informationen zu den Jobs und zu deren Ausführungen zentral für alle Benutzer einsehbar und es können auch die Zugriffsrechte für Benutzer an einer Stelle gesteuert werden. Weiters werden Techniken die die Datenbank bereitstellt genutzt um eine Skalierung zu unterstützen (siehe Kapitel \ref{sec:scaling}).
 \subsection{Datenbankmodell}
-aasdas
+Das Datenbankmodell ist simpel gehalten und entspricht der \emph{dritten Normalform}. Es gibt also (vgl. \parencite[S. 317ff]{dbgrund})\begin{itemize}
+	\item keine Felder die mehrere Werte enthalten (erste Normalform),
+	\item keine Felder die die selbe Art von Werten enthalten (zweite Normalform)\footnote{Also in etwa die Felder Ausführungszeitpunkt1, Ausführungszeitpunkt2 ...}
+	\item keine Wiederholungen von nicht-Schlüsselwerten in mehreren Datensätzen (dritte Normalform)
+\end{itemize}
+\begin{figure}
+	\centering
+	\includegraphics[width=0.7\linewidth]{images/dbmodel.png}
+	\caption{Datenbankmodell, eigene Darstellung}
+	\label{fig:dbmodel}
+\end{figure}
+Folgende Entitäten finden sich im Datenmodell:
+\begin{itemize}
+	\item worker - Enthält den Klassennamen der Instanz die die Abarbeitung der Arbeit der jobs übernehmen.
+	\item node - Enthält einen Eintrag für jeden Server der eine Instanz von dJob ausführt.
+	\item node\_worker - Ist eine \emph{intersection table}\footnote{Mithilfe einer intersection table wird eine m:n Beziehung zwischen Entitäten dargestellt.\parencite{oracle_intersection}} die die in einer Instanz verfügbaren Worker enthält.
+\end{itemize}
 \subsection{Zugriff}
 sdasdaas
 \section{Skalierung}
 sdfsfs
-\subsection{Skalierung der Leistung}
+\subsection{Skalierung der Leistung} \label{sec:scaling}
 sdsds
-\subsection{Funktionale Skalierung}
+\subsection{Funktionale Skalierung} \label{sec:dynload}
 sdsd
 \begin{lstlisting}[caption={Dynamic Loading, siehe WorkerRepository.cs - LoadAllWorkers()},label={lst:dynamicloading},captionpos=b]
 foreach ( string file in  workerDirectory.GetFiles( "*.dll" ) )
