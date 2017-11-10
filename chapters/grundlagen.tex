@@ -314,7 +314,7 @@ Die Granularität der Sperre wird in der Regel durch das Datenbanksystem festgel
 \\Um Deadlocks von vorne herein zu Vermeiden sollten Ressourcen immer in der selben Reihenfolge allokiert werden. Die zweite Transkation könnte dann schon Datensatz A nicht sperren, würde blockieren und die ersten Transaktion könnte vollständig abgearbeitet werden wodurch die zweite dann ebenso durchlaufen kann.
 
 
-\subsection{Probleme durch mehrere Transaktionen}
+\subsection{Probleme durch mehrere Transaktionen}\label{subs:isolation}
 Beim gleichzeitigen Lesen und Schreiben von Daten durch mehrere Transaktionen kann es zu vier grundlegenden Problemen kommen:
 \begin{itemize}
 	\item \emph{Lost Update} - bei einem Lost Update lesen zwei Transaktionen einen Datensatz, verändern den Inhalt eines Feldes und schreiben den Datensatz zurück. Die Änderung die dabei zuletzt durchgeführt wurde bleibt bestehen, die Änderung durch frühere Transaktion geht dabei verloren. Dies kann in etwa vorkommen wenn ein Datensatz einem Benutzer angezeigt wird und dieser danach eine Änderung vornimmt und speichert. Der Datensatz ist dabei in der Regel nicht mehr von der Datenbank gesperrt und daher nicht durch grundlegende Mechanismen geschützt. Wenn nun beim Speichern nicht geprüft wird ob der Datensatz in der Datenbank verändert wurde, so gehen Änderungen durch andere Benutzer oder Systeme die in der Zeit seit dem Laden des Datensatzes vorgenommen wurden, verloren.\parencite[S. 415f]{dbgrund}

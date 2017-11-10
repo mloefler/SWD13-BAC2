@@ -42,15 +42,132 @@ Folgende Entitäten finden sich im Datenmodell:
 	\item worker - Enthält den Klassennamen der Instanz die die Abarbeitung der Arbeit der jobs übernehmen.
 	\item node - Enthält einen Eintrag für jeden Server der eine Instanz von dJob ausführt.
 	\item node\_worker - Ist eine \emph{intersection table}\footnote{Mithilfe einer intersection table wird eine m:n Beziehung zwischen Entitäten dargestellt.\parencite{oracle_intersection}} die die in einer Instanz verfügbaren Worker enthält.
+	\item job - Enthält die Jobs die auszuführen sind. 
+	\item job\_schedule - Enthält zu jedem Job ein oder mehrere Ausführungszeitpunkte oder einen Hinweis wie der job zu verplanen ist (\code{scheduling\_mode}).
+	\item job\_error\_log - Enthält Details zu Fehlern (Exceptions) die während der Ausführung aufgetreten sind. Damit kann der Administrator den Grund für den Fehler feststellen.\footnote{Hier wurde das Protokollieren in die Datenbank gewählt da dies im Gegensatz zu einer Protokolldatei leichter in einer verteilten Umgebung zugänglich ist.}
 \end{itemize}
+Die Primärschlüssel in den Tabellen wurden als \emph{Unique Identifier} umgesetzt. Dies ist eine Zeichenfolge die errechnet werden kann. Diese hat den Vorteil gegenüber einer numerischen \emph{Identity}, also einem eindeutigen, monoton steigendem Wert der beim Einfügen in die Datenbank durch diese vergeben wird, dass im Falle von verteilten Systemen die Erstellung der Id weniger aufwendig ist, da diese ohne Synchronisierung auf der verteilten Datenbankinstanzen errechnet werden kann. Bei der Verwendung von Identities müssen die Werte, da sie ja eindeutig sein müssen, zwischen den Instanzen synchronisiert werden, was einen Mehraufwand bedeutet. 
+\\Der Nachteil der sich unter Umständen aus der Verschlechterung des Index aus der stärkeren Streuung der Werte gibt, wird in diesem Fall in Kauf genommen da in der Regel für den Zugriff andere Indices verwendet werden.\parencite{ms_guid}
 \subsection{Zugriff}
-sdasdaas
+Der Zugriff auf die Datenbank erfolgt mittels dem Microsoft Entity Framework (im folgenden kurz EF) in der Version 6. Dies ist eine \emph{ORM (Object Relational Mapping)} Bibliothek die die Datenbank hinter einer Zugriffsschicht verbirgt und die relationalen Daten (Datensätze) direkt in Objekte umwandelt. Damit ist für den Entwickler kein Bruch zwischen Datenbank und objektorientierter Anwendungsentwicklung erkennbar.
+\\Dieser Ansatz wird in der Umsetzung vollständig verfolgt in dem die so genannte \emph{code-first} Methode verwendet wird. Dabei
+werden die Entitäten als C\# Klassen definiert und automatisch durch das EF die Datenbank erzeugt. 
+\begin{lstlisting}[caption={Klassendefinition für Code-First, siehe Job.cs}, label={lst:codefirst}, captionpos=b]
+    [Table("job")]
+	public class Job
+	{
+		[Key]
+		[Column("job_id")]
+		[DatabaseGenerated( DatabaseGeneratedOption.Identity )]
+		public Guid Id { get; protected set; }
+
+		[Required]
+		[MinLength(8)]
+		[MaxLength(64)]
+		[Column("name")]
+		public string Name { get; protected set; }
+
+		[Required]
+		[Column("worker_id")]
+		public Guid WorkerRef { get; protected set; }
+
+		[ForeignKey("WorkerRef")]
+		public virtual Worker Worker { get; set; }
+
+		[Column("configuration_string")]
+		public string ConfigurationString { get; set; }
+
+		[Column("allocated_to_node_id")]
+		public Guid? AllocatedToRef { get; protected set; }
+
+		[ForeignKey(nameof( AllocatedToRef ) )]
+		public virtual Node AllocatedTo { get; protected set; }
+
+		[Column("allocated_at")]
+		public DateTime? AllocatedAt { get; protected set; }
+
+		[Column( "released_at" )]
+		public DateTime? ReleasedAt { get; protected set; }
+		
+		// lines ommited
+		
+		public virtual ICollection<JobSchedule> Schedule { get; protected set; }
+		
+		//lines omitted
+}
+\end{lstlisting}
+Über \emph{Annotierungen} können Eigenschaften in der Umsetzung geändert werden (siehe \parencite{eftut}). Mit den Annotierungen \code{Table} und \code{Column} können die Namen der Tabellen und Felder geändert werden. Für die Eigenschaft \code{Id}  werden zusätzlich die Annotierungen \code{Key} um diese als Primärschlüssel zu kennzeichnen, und \code{DatabaseGenerated} verwendet. Damit wird - da es sich um einen Unique Identifier handelt - ein default-Wert für die Spalte von \code{newsequentialid()} erzeugt. Die Datenbank generiert somit den Primärschlüssel selbst. \code{Required} definiert für die Eigenschaft \code{Name} eine not-null Beschränkung, der Wert muss also im Datensatz vorhanden sein. Zusätzlich sind für diese Eigenschaften noch eine minimale und maximale Länge gesetzt. Dies ist bei String-Typen von Beduetung, da sonst automatisch ein String mit maximaler Länge in der Datenbank angelegt wird, was negative Auswirkungen auf die Laufzeit haben kann. 
+\\Von Bedeutung sind auch die \code{virtual} Modifikatoren. Diese weisen das EF an, die Inhalte der Eigenschaften erst beim tatsächlichen Zugriff auf diese zu laden. Dies wird als \emph{lazy loading} bezeichnet. Damit werden Daten aus verbundenen Tabellen nur dann geladen, wenn diese benötigt wird. Ohne das lazy loading würden die Daten immer geladen werden, auch wenn diese gar nicht benötigt werden. Durch die Nutzung dieser Methode kann das verhalten zur Laufzeit verbessert werden da keine unnötigen Daten in der Datenbank gelesen werden. Die technische Umsetzung in EF erfolgt mittels des so genannten \emph{Proxy-Patterns} \footnote{ siehe \parencite[S. 207ff]{gamma1995}}\parencite{ms_proxy}. Dabei wird dynamisch durch das EF eine Instanz einer Klasse erzeugt die von der Entität erbt. Um das lazy loading zu Implementieren, werden in den Zugriffsfunktionen der Proxy-Klasse zuerst die Daten von der Datenbank geladen und erst danach an den Aufrufer zurückgegeben.
+\\Der Zugriff auf die Daten erfolgt über einen so genannten \code{Context} der die notwendigen Operationen durchführt und die geladenen Objekte gegebenenfalls anreichert. Der Context speichert auch alle geladenen Objekte und erkennt und verfolgt Änderungen an den Objekten so dass alle Änderungen an geladenen Objekten über den Context mit einem einzigen Befehl (\code{Context.SaveChanges()}) gespeichert werden können.
+\\Geladen werden die Abfragen über die C\# Spracherweiterung \emph{LINQ}\footnote{Language INtegrated Query - siehe \url{https://docs.microsoft.com/en-us/dotnet/csharp/programming-guide/concepts/linq/}}. Diese datenbankunabhängige Abfragesprache wird durch das EF in SQL übersetzt. Daher wird LINQ auch für Abfragen in interne Collections wie Listen verwendet.
+\begin{lstlisting}[caption={LINQ Abfrage - Lambda Syntax, siehe DefaultJobLoader.cs - DoLoad()},label={lst:linq_fluent},captionpos=b]
+	var q = dbContext.Jobs.Include( "Worker" )
+			.Where( j => myNextJobIds.Contains( j.Id ) )
+			.OrderBy( j => j.NextRunAt )
+			.AsNoTracking( )
+			;
+
+\end{lstlisting}
+Wie in Listings \ref{lst:linq_fluent} und \ref{lst:linq_expression} dargestellt ist, verfügt LINQ über zwei unterschiedliche Formen. Die so genannte \emph{Lambda} Syntax, bei der die Syntax der C\# Sprache beibehalten wird und \emph{Lambdas} einsetzt um Operationen durchzuführen. Und die \emph{Query Expression} Syntax, bei der eine SQL ähnliche Abfrage direkt im Code geschrieben werden kann. Beide Varianten sind in etwa gleich mächtig\footnote{Einige Funktionen stehen nur in der Lambda Syntax zur Verfügung} und können auch abwechselnd verwendet werden.\footnote{Die Query Expression Syntax ist genau genommen nur eine Syntax Erweiterung und wird in eine Lambda Expression umgewandelt.\parencite{linq}}
+\begin{lstlisting}[caption={LINQ Abfrage - Query Expression Syntax},label={lst:linq_expression},captionpos=b]
+	var q = from job in dbContext.Jobs
+			where myNextJobIds.Contains( job.Id ) )
+			orderby job.NextRunAt
+			select job
+		;
+\end{lstlisting}
+Zeile 1 in Listing \ref{lst:linq_fluent} definiert die Tabelle aus der die Daten geladen werden sollen. Die Erweiterung \code{.Include("Worker")} weist das EF an, die Daten der Eigenschaft \code{Worker} aus der verbundenen Tabelle ebenso gleich zu laden. Dies nennt man \emph{eager loading}. Damit werden alle Daten in einer Abfrage geladen, was positive Auswirkungen auf die Laufzeit hat.\footnote{Die Eigenschaft \code{Worker} ist virtuell und wird daher erst beim Zugriff geladen. Da aber an dieser Stelle im Code die Daten der \code{Worker} Eigenschaft benötigt werden, wird hier ein eager-loading erzwungen um performanter zu sein.}
+\subsubsection{Laden der Jobs}
+Das Laden der Jobs die ausgeführt werden sollen ist eine der kritischsten Stellen. Die Jobs müssen so rasch wie möglich geladen werden, ohne aber dabei andere laufende Instanzen zu behindern. Dies wird Mithilfe der Nutzung von Isolation Levels und Sperren erreicht. Dies ist nur mithilfe eines SQL Statements möglich, EF bietet auf dieser Ebene keine Unterstützung an.
+\begin{lstlisting}[caption={Jobs Laden, siehe DefaultJobLoader.cs - DoLoad()},label={lst:jobloader},captionpos=b]
+string loadCommand = $@"SELECT TOP {gulpSize}
+				job.job_id
+				, job.name
+				, node.node_name
+				FROM job
+				WITH (XLOCK, ROWLOCK, READCOMMITTED , READPAST)
+					JOIN node_worker ON ( node_worker.worker_id = job.worker_id )
+					JOIN node ON ( node.node_id = node_worker.node_id AND node.node_name = @NodeId)
+				WHERE job.allocated_to_node_id IS NULL
+					AND job.next_run_at < CURRENT_TIMESTAMP
+				ORDER BY job.next_run_at ASC";
+\end{lstlisting}
+Mit dem Statement in Listing \ref{lst:jobloader} werden die Id's der nächsten Jobs gelesen die auszuführen sind. Mit dem \code{join} der node\_worker Tabelle werden dabei nur die jobs berücksichtigt, die in dieser Instanz ausgeführt werden können. Die Abfrage \code{allocated\_to IS NULL} schließt Jobs aus die bereits in anderen Instanzen geladen sind. 
+\\Die sogenannten \emph{Hinweise (hints)} (siehe \parencite{ms_hints}) in Zeile 6 wird das verhalten bei Nebenläufigkeit gesteuert.
+\begin{itemize}
+	\item \code{READCOMMITED} - Setzt die Isolationsstufe für dieses Statement. Damit werden Änderungen von anderen committeten Transaktionen gelesen, auch wenn diese nach dem Start der eigenen Transaktion erst committed wurden.\footnote{Siehe Kapitel \ref{subs:isolation}.} Die Isolationsstufe wird hier erzwungen, damit READPAST immer fehlerfrei angewendet werden kann.
+	\item \code{READPAST} - Damit werden von anderen Transaktionen gesperrte Datensätze ignoriert und die Datensätze nach dem gesperrten gelesen. Ansonsten würde die Transaktion warten bis die Sperre auf dem Datensatz aufgehoben ist.
+	\item \code{ROWLOCK} - Setzt eine Sperre auf Datensatzebene auf die gelesenen Datensätze.
+	\item \code{XLOCK} - Weist die Datenbank an ein Exklusive Sperre zu setzen. Damit kann der Datensatz von keiner anderen Transaktion gelesen werden.
+\end{itemize}
+Nachdem die Jobs geladen wurden, werden sie in der selben Transaktion durch das setzen des Feldes \code{allocated\_to} logisch gesperrt und von anderen Instanzen nicht mehr geladen. Diese Vorgehensweise stellt sicher dass die Jobs nur von einer Instanz gelesen werden, aber andere Instanzen weitere auszuführende Jobs lesen kann. Die Anzahl der Jobs die gelesen werden ist durch die \code{TOP} Klausel beschränkt die von Administrator konfiguriert werden kann.\footnote{Diese Art der Übergabe von Parametern ist prinzipiell ein Sicherheitsrisiko (\emph{SQL-Injection}). Da der Parameter ein Integer Wert ist und dies durch die Anwendung sichergestellt ist, ist das Statement trotzdem sicher.}
+\\Um die Transaktion so klein wie möglich zu halten und somit die gesetzten Datenbanksperren so kurz wie möglich zu halten, endet die Transaktion nach dem setzen der Node. In einer zweiten Transaktion danach werden erst die vollständigen Daten der allokierten Jobs geladen.
+\\Nachdem alle Jobs geladen wurden, werden diese dem Arbeitsvorrat hinzugefügt. Die Details dazu sind in den Kapiteln \ref{sec:producerconsumer} und \ref{sec:blockingq} beschrieben.
 \section{Skalierung}
-sdfsfs
+Einer der ausschlaggebenden Gründe für die Entwicklung war, dass bisherige Lösungen hinsichtlich der Leistung schlecht skalieren. Die einzige Möglichkeit ist meist, einen stärkeren Server zu nutzen. Deswegen ist die leichte Skalierung der Leistung eine grundlegende Anforderung an das System. Um bestimmte Aufgaben effizient abarbeiten zu können, kann es notwendig sein, eine darauf ausgelegt Hardware zu verwenden, um in etwa Berechnungen auf einer GPU durchzuführen. Dies wird mit der Möglichkeit der funktionalen Skalierung erreicht.
 \subsection{Skalierung der Leistung} \label{sec:scaling}
-sdsds
+Das umgesetzte System bietet zwei Möglichkeiten die Leistung zu skalieren. Die erste Möglichkeit ist die Skalierung der Leistung innerhalb eines Servers durch die Konfiguration der maximal gleichzeitig laufenden threads pro Instanz. Damit kann die für dJob zur Verfügung stehende Leistung sowohl erhöht, als auch beschränkt werden um andere, am selben Server laufende Applikationen nicht zu beeinflussen.
+\\Die zweite Möglichkeit ist die Nutzung von mehren Servern. Dies ist durch dJob durch Installation des Services und der benötigten Worker erledigt. Es sind keinerlei weitere Anpassungen oder Konfigurationen nötig um das System zum Laufen zu bringen. 
+\\Für die Installation gibt es drei grundlegende Möglichkeiten (siehe auch Darstellung \ref{fig:performance_scaling}):
+\begin{enumerate}
+	\item Szenario 1 - Ein Server, Datenbank und Applikation ist am selben Server installiert. Damit können kleine Systeme mit geringen Leistungsanforderungen umgesetzt werden.
+	\item Szenario 2 - Mehrere Server, auf einem Server ist die Datenbank und die Applikation installiert, auf den restlichen Servern ist nur die Applikation installiert. Damit können mittlere Systeme, oder Systeme mit spezialisierter Hardware umgesetzt werden.
+	\item Szenario 3 - Mehrere Server auf denen die Applikation installiert ist und die auf eine verteilte Datenbank auf mehreren Servern zugreifen. Damit können größte und weltweit verteilte Systeme umgesetzt werden.
+\end{enumerate}
+Durch die Verwendung eines Datenbanksystems zur Speicherung der Jobs ist die Konfiguration des dJob Services in allen Szenarien gleich. Es muss lediglich der \emph{connection string} der die Verbindung zur Datenbank definiert korrekt konfiguriert werden. Für das System und für die einzelnen Instanz hat das gewählte Szenario kein Auswirkungen und ist für die Anwendung auch nicht merkbar. Die Probleme die durch die Gleichzeitigkeit entstehen sind in der Datenbank und durch die Umsetzung des Ladens der Jobs abgefangen. 
+\\Im dritten Szenario liegt die Komplexität der Konfiguration außerhalb des Systems bei der verteilten Datenbank. Dies kann in SQL-Server mittels einer \emph{transactional replication} zwischen Servern.\parencite{ms_resolve} Damit werden alle Daten in den Datenbanken und alle Daten die zur Verwaltung nötig sind (wie in etwa Sperren) zwischen den einzelnen Servern automatisch aktualisiert. Aus Sicht der Applikation ändert sich nichts, da eine verteilte Datenbank sich gegenüber Anwendungen wie eine einzelne Instanz verhält. Eine Variante des dritten Szenarios ist die Verwendung einer Cloud-basierten Datenbank. Diese ist aus Sicht der Applikation ident mit Szenario 3. Um bei der Verwendung einer Cloud-Datenbank immer genügend Arbeitsvorrat in einer Instanz zur Verfügung zu haben, kann es notwendig sein eine höhere \code{gulpSize} und eine höhere \code{lowWaterMark}\footnote{Das ist die Anzahl an Jobs im Arbeitsvorrat die unterschritten sein muss bevor neue Jobs geladen werden.} zu konfigurieren. Damit kann eine längere Dauer des Ladens der Jobs abgefangen werden.
+\\In der beispielhaften Verwendung wurde das Szenario 2 umgesetzt und erreicht die derzeit nötige Leistung mit 3 Servern mit je 8 Kernen die über Österreich verteilt genutzt werden.
+\begin{figure}
+	\centering
+	\includegraphics[width=0.7\linewidth]{images/scaling}
+	\caption{Skalierung der Leistung, eigene Darstellung}
+	\label{fig:performance_scaling}
+\end{figure}
+
 \subsection{Funktionale Skalierung} \label{sec:dynload}
-sdsd
+
+
+
 \begin{lstlisting}[caption={Dynamic Loading, siehe WorkerRepository.cs - LoadAllWorkers()},label={lst:dynamicloading},captionpos=b]
 foreach ( string file in  workerDirectory.GetFiles( "*.dll" ) )
 {
@@ -73,16 +190,10 @@ foreach ( string file in  workerDirectory.GetFiles( "*.dll" ) )
 \end{lstlisting}
 \section{Concurrency}
 dasdasd
-\subsection{Threadpool}
-asda
-\subsection{Producer-Consumer}
+\subsection{Producer-Consumer}\label{sec:producerconsumer}
 adadsa
-\subsection{Blocking-Queue}
-\lstlistingname{ BlockingQueue-V1}
-\begin{lstlisting}
-	    /// <summary>
-	/// own, experimental, implementation of ablocking, notifying Q for a producer/ consumer model
-	/// </summary>
+\subsection{Blocking-Queue}\label{sec:blockingq}
+\begin{lstlisting}[caption={Implementierung Blocking Q - V1, siehe MyBlockingQV1.cs}, label={lst:blockingV1}, captionpos=b]
 	public class MyBlockingQueueV1<T>
 	{
 		/// <summary>
