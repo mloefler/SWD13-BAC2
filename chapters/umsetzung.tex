@@ -165,9 +165,16 @@ Durch die Verwendung eines Datenbanksystems zur Speicherung der Jobs ist die Kon
 \end{figure}
 
 \subsection{Funktionale Skalierung} \label{sec:dynload}
-
-
-
+Mithilfe der funktionalen Skalierungen werden zwei grundlegende Anforderungen erfüllt. Es können weitere Worker, also die Funktionen die die tatsächliche Arbeit verrichten, ohne Veränderung des dJob Systems umgesetzt werden, und die einzelnen dJob Instanzen können über unterschiedliche Worker besitzen um differenzierte Hardware der Server auszunutzen.
+\\Um neue Worker zu definieren, müssen diese in einer \emph{\.NET Assembly} vorhanden sein. 
+Diese ist die kleinste Einheit in der Code zur Verfügung gestellt werden kann. Sie enthält neben dem Programmcode\footnote{Dieser ist in der Assembly bereits in die \emph{Intermediate Language (IL)} kompiliert.} auch Metadaten, die unter anderem auch die Abhängigkeiten zu anderen Assemblies definieren. Eine Assembly wird typischerweise als eine Bibliothek (.dll) oder als direkt ausführbares Programm zur Verfügung (.exe) gestellt \parencite[S. 17ff]{box}. Das dJob Service wird als ausführbares Programm zur Verfügung gestellt, alle Assemblies von denen es abhängig ist, sind entweder .NET Standard-Assemblies oder, wie die dJob.core Bibliothek im selben Verzeichnis vorhanden und können somit durch .NET selbst geladen werden. Die Abhängigkeiten zu diesen Assemblies wird zum Zeitpunkt der Kompilierung ermittelt und in den Metadaten der .exe Datei gespeichert.
+\\Um Programmcode zu nutzen der zum Zeitpunkt der Kompilierung nicht Teil von dJob war, müssen diese Assemblies zur Laufzeit \emph{dynamisch} geladen werden.Das dJob service sucht dazu in einem konfiguriertem Pfad alle Programmbibliotheken und lädt dies eAssemblies in den Speicher, dies ist in Codebeispiel \ref{lst:dynamicloading} dargestellt. 
+Worker - Klassen in den Bibliotheken die die Arbeit erledigen, müssen dabei \begin{enumerate}
+	\item von außerhalb der Bibliothek sichtbar sein - nur so kann eine Klasse instanziiert werden
+	\item vom Interface \code{at.loe.djob.core.worker.IWorker} erben
+	\item einen parameterlosen Konstruktor haben.
+\end{enumerate}
+Alle im Verzeichnis vorhandenen Bibliotheken (Zeile 1) werden geladen (Zeile 3). Danach werden alle Klassen die das Interface \code{IWorker} implementieren (Zeile 5\&6) instantiiert (Zeile 8) und in einer Collection\footnote{Es handelt sich um ein \code{ConcurrentDictionary}. Dies ist eine Key/ Value Sammlung mit eindeutigen Keys die für die Verwendung durch mehrere threads vorgesehen ist. Die Zugriffe auf die Collection sind immer thread-safe, alle eventuell notwendigen Sperren werden durch die Collection selbst verwaltet.} abgelegt (Zeile 12).
 \begin{lstlisting}[caption={Dynamic Loading, siehe WorkerRepository.cs - LoadAllWorkers()},label={lst:dynamicloading},captionpos=b]
 foreach ( string file in  workerDirectory.GetFiles( "*.dll" ) )
 {
@@ -188,10 +195,18 @@ foreach ( string file in  workerDirectory.GetFiles( "*.dll" ) )
 	}
 }
 \end{lstlisting}
+Wenn die Bibliotheken die geladen werden sollen Abhängigkeiten zu anderen, nicht-Standard, Bibliotheken haben, so werden diese nur automatisiert aufgelöst und geladen wenn diese entweder global verfügbar sind oder in Verzeichnis des Services zu finden sind \parencite[S. 42ff]{box}). Liegen diese aber im Verzeichnis in dem auch die Worker-Bibliothek abgelegt ist, so muss diese Auflösung durch die Anwendung selbst erfolgen. Dafür stellt .NET das Ereignis \code{AssemblyResolve} zur Verfügung. Die Anwendung kann dann die benötigten Bibliotheken selbst suchen und laden\footnote{Siehe WorkerRepository.cs Methode \code{LoadDependentAssembly()}} \footnote{Wird dies nicht durch die Anwendung erledigt, so erhält man eine \code{FileNotFoundException} mit dem Name der Bilbiothek \emph{die den Verweis enthält}, und nicht, den Namen der Bibliothek die nicht aufgelöst werden kann. }.
+\\Nachdem alle Worker geladen wurde, werden diese in der Datenbank für die aktuelle Instanz aktualisiert, so dass beim Laden der Jobs für die Instanz nur diese Jobs geladen werden die auch ausgeführt werden können. Dadurch können für jede Instanz unterschiedliche Worker konfiguriert werden, was die zweite Anforderung abdeckt.
 \section{Concurrency}
-dasdasd
+Um die Leistung eines Servers ausnutzen zu können werden die geladenen Jobs durch mehrere threads parallel abgearbeitet. Dazu werden durch den \code{DefaultJobScheduler} die konfigurierte Anzahl an threads angelegt und gestartet. Diese beziehen ihre Arbeit aus einer globalen Datenstruktur die Jobs und führen dann die für die Jobs konfigurierten Worker aus. Diese Architektur entspricht dem \emph{Producer/ Consumer Pattern} \parencite[S. 163ff]{jthreads}. Der \code{DefaultJobLoader} entspricht dabei dem Producer, die einzelnen \code{JobWorker} dabei den Consumern. Ein entscheidendes Element dieses Patterns ist die Datenstruktur die für die Entkopplung sorgt. Durch den Zugriff mehrere threads muss diese einerseits thread-safe sein, andererseits müssen die Operationen so effizient wie möglich sein. Daher werden diese zwei Element näher betrachtet.
 \subsection{Producer-Consumer}\label{sec:producerconsumer}
-adadsa
+\begin{figure}
+	\centering
+	\includegraphics[width=0.7\linewidth]{images/B2_Producer_Consumer_1}
+	\caption{Producer/ Consumer Darstellung, vgl. \parencite[S. 163]{jthreads}}
+	\label{fig:architecture}
+\end{figure}
+\parencite{tpl}
 \subsection{Blocking-Queue}\label{sec:blockingq}
 \begin{lstlisting}[caption={Implementierung Blocking Q - V1, siehe MyBlockingQV1.cs}, label={lst:blockingV1}, captionpos=b]
 	public class MyBlockingQueueV1<T>
@@ -252,5 +267,35 @@ adadsa
 		}
 	}
 \end{lstlisting}
-\section{Verbesserungsmöglichkeiten}
+\subsection{Verwendung von Bordmitteln}
+.Net bietet zur asynchronen Abarbeitung von Aufgaben seit der Version 4 eine eigene Bibliothek, die \emph{Task Parallel Library (TPL)}\footnote{Siehe \url{https://msdn.microsoft.com/de-de/library/dd460717(v=vs.110).aspx}}. Diese und die Schlüsselwörtar \code{async/ await} ermöglichen es, Aufgaben sehr einfach parallel abzuarbeiten. Damit könnte der Scheduler wie in Codebeispiel \ref{lst:tpl} dargestellt umgesetzt werden. In Zeile 9 werden dabei die geladenen Jobs durch mehrere threads parallel \code{Parallel.ForEach} ausgeführt.
+\\Da hier sehr viele Elemente versteckt in einer Standard-Bibliothek ablaufen und über weite Strecken die Transparenz und die Tuning-Möglichkeiten durch die Anwendung nicht mehr gegeben sind, wurde eine Umsetzung mittels TPL bewusst nicht gewählt.
+
+\begin{lstlisting}[caption={JobScheduler, einfache TPL Implementierung, siehe SimpleTpl.cs}, label={lst:tpl}, captionpos=b]
+public class SimpleTpl<T>
+{
+	private volatile bool isRunning = true;
+	
+	public void Start()
+	{
+		while ( isRunning )
+		{
+			Parallel.ForEach( LoadWork(), j => ProcessJob( j ) );
+		}
+	}
+	
+	private void ProcessJob( T job )
+	{
+		//execute job
+	}
+	
+	private List<T> LoadWork()
+	{
+		//load from db or sleep and try again
+		return new List<T>();
+	}
+	
+	public void Stop() => isRunning = false;
+}
+\end{lstlisting}
 \chapterend
