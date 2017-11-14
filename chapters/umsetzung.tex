@@ -21,7 +21,7 @@ Die Trennung der Umsetzung erfolgte für den Scheduler und den JobLoader durch I
 \end{figure}
 Nach dem Start und der Initialisierung werden die Tasks die als nächstes ausgeführt werden sollen durch den JobLoader geladen und für andere Instanzen gesperrt. Dies geschieht durch das setzen des aktuellen Servers im Job (\code{Job.AllocatedTo}). Damit werden diese Jobs von anderen Instanzen ignoriert. Die Jobs werden dann in die interne Warteschlange (\code{pendingWork}) eingetragen.
 \\Die Jobs in der Warteschlange werden durch die einzelnen Threads abgeholt, verarbeitet und die Job-Daten inklusiver dem Zeitpunkt der nächsten Ausführung in der Datenbank aktualisiert.
-\\Die Verarbeitung selbst wird durch die Implementation des \code{IWorker} der für den Job vorgesehen ist (\code{Job.Worker}) erledigt. Welche Arbeiten verrichtet werden ist dem System nicht bekannt. Diese Worker werden durch den Klassennamen identifiziert und beim Starten des Systems aus dynamischen Bibliotheken geladen und instantiiert (siehe Kapitel \ref{sec:dynload}).
+\\Die Verarbeitung selbst wird durch die Implementation des \code{IWorker} der für den Job vorgesehen ist (\code{Job.Worker}) erledigt. Welche Arbeiten verrichtet werden ist dem System nicht bekannt. Diese Worker werden durch den Klassennamen identifiziert und beim Starten des Systems aus dynamischen Bibliotheken geladen und instantiiert (siehe Kapitel \ref{sec:dynload}). Diese Entkopplung entspricht dem \emph{Command Pattern} \parencite{gamma1995}. Der \code{JobWorker} nimmt die Rolle des Receivers und des Clients gleichzeitig ein, da er vor der Ausführung noch das gewünschte ConcreteCommand aussucht.
 
 \section{Datenbank}
 Die Datenbank dient zur Speicherung aller notwendigen Daten. Es werden - ausgenommen Ablaufprotokolle - keine Daten anderswo gespeichert. Damit sind die Informationen zu den Jobs und zu deren Ausführungen zentral für alle Benutzer einsehbar und es können auch die Zugriffsrechte für Benutzer an einer Stelle gesteuert werden. Weiters werden Techniken die die Datenbank bereitstellt genutzt um eine Skalierung zu unterstützen (siehe Kapitel \ref{sec:scaling}).
@@ -200,14 +200,37 @@ Wenn die Bibliotheken die geladen werden sollen Abhängigkeiten zu anderen, nich
 \section{Concurrency}
 Um die Leistung eines Servers ausnutzen zu können werden die geladenen Jobs durch mehrere threads parallel abgearbeitet. Dazu werden durch den \code{DefaultJobScheduler} die konfigurierte Anzahl an threads angelegt und gestartet. Diese beziehen ihre Arbeit aus einer globalen Datenstruktur die Jobs und führen dann die für die Jobs konfigurierten Worker aus. Diese Architektur entspricht dem \emph{Producer/ Consumer Pattern} \parencite[S. 163ff]{jthreads}. Der \code{DefaultJobLoader} entspricht dabei dem Producer, die einzelnen \code{JobWorker} dabei den Consumern. Ein entscheidendes Element dieses Patterns ist die Datenstruktur die für die Entkopplung sorgt. Durch den Zugriff mehrere threads muss diese einerseits thread-safe sein, andererseits müssen die Operationen so effizient wie möglich sein. Daher werden diese zwei Element näher betrachtet.
 \subsection{Producer-Consumer}\label{sec:producerconsumer}
+Der Producer/ Consumer Pattern ist einer der häufigst verwendeten Pattern wenn es um Abarbeitung von Aufgaben durch mehrere threads geht. Er besteht aus 
+\begin{itemize}
+	\item ein oder mehreren Producern die in eigenen threads laufen und Arbeitspakete produzieren
+	\item einer zentralen Datenstruktur, in die Producer die Arbeitspakete einfügen und die Producer diese wieder entfernen
+	\item ein oder mehrere Consumer, die wiederum als eigene threads laufen und die Arbeitspakete aus der zentralen Datenstruktur holen und abarbeiten.
+\end{itemize}
+Dies ist auch in Abbildung \ref{fig:architecture} dargestellt.\parencite{jthreads}
 \begin{figure}
 	\centering
 	\includegraphics[width=0.7\linewidth]{images/B2_Producer_Consumer_1}
 	\caption{Producer/ Consumer Darstellung, vgl. \parencite[S. 163]{jthreads}}
 	\label{fig:architecture}
 \end{figure}
-\parencite{tpl}
-\subsection{Blocking-Queue}\label{sec:blockingq}
+\\Die Verbreitung dürfte in seiner Einfachheit begründet sein. Denn sowohl Producer als auch Consumer, die jweweils in verschiedenen threads ihre Arbeit verrichten brauchen beim Zugriff auf die Daten keine weiteren Aktionen durchführen\footnote{Dies gilt für die zu bearbeitenden Daten, beim Zugriff auf andere, globale Daten sind diese sehr wohl Sperren zu setzen.} \parencite[S. 163ff]{jthreads}. Der Schutz der Daten des Arbeitspaketes erfolgt durch die Datenstruktur, in der Regel eine Queue. Diese setzt innerhalb der öffentlichen Methoden die Sperren wenn nötig. Diese übernimmt auch die Aufgabe des Aufweckens von Consumern wenn Arbeit anliegt.
+\\Der Pattern ist auch sehr vielseitig. In einer weiteren gebräuchlichen Form (siehe Abbildung \ref{fig:architecture_2}) ist die Verwendung von mehreren Queues und einem Dispatcher. Dies kann einerseits bei einer sehr hohen Anzahl an Producern oder Consumern verwendet werden, da dadurch die Häufigkeit der Sperren, und damit die Wartezeit eines threads gesenkt wird. Weiters kann auch die Anzahl an Consumern pro Queue unterschiedlich sein. Damit kann der Dispatcher wichtigere Arbeitsaufgaben in die Queue legen der mehr Consumer zugeteilt sind. Damit erfolgt eine schnellere Abarbeitung des Arbeitspaketes.
+\begin{figure}
+	\centering
+	\includegraphics[width=0.7\linewidth]{images/pc_w_dispatcher}
+	\caption{Producer/ Consumer Darstellung mit mehreren Queues, vgl. \parencite[S. 163]{jthreads}}
+	\label{fig:architecture_2}
+\end{figure}
+\\Im dJob Service ist die Implementation des \code{IJobLoader} der einzelne Producer. Die vorab allokierten und gestarteten Instanzen der \code{JobWorker} bilden die Producer. Die zentrale Datenstruktur ist die \code{BlockingCollection} namens \code{pendingWork}.
+\subsection{BlockingCollection}\label{sec:blockingq}
+Wie im vorigen Kapitel beschrieben, leistet die zentrale Datenstruktur im Producer/ Consumer Pattern den Großteil der Arbeit was die Synchronisierung der einzelnen Threads betrifft. Daher ist das Design und die Implementierung dieser Klasse essentiell für die Leistung des Gesamtsystems. Die Klasse muss
+\begin{itemize}
+	\item sicherstellen dass die Methode zum Einfügen der Elemente thread-safe ist, also mehrere Threads zugleich Elemente einfügen können ohne die Datenstruktur zu beschädigen
+	\item sicherstellen, dass die Methode zum Entfernen der Elemente thread-sage ist
+	\item Consumer Threads suspendieren wenn keine weitere Arbeit anliegt
+	\item Consumer Threads aufwecken wenn weitere Arbeit eingefügt wurde
+	\item die Anzahl an gesetzten Sperren und die Zeitdauer der Sperre so gering wie möglich halten.
+\end{itemize}
 \begin{lstlisting}[caption={Implementierung Blocking Q - V1, siehe MyBlockingQV1.cs}, label={lst:blockingV1}, captionpos=b]
 	public class MyBlockingQueueV1<T>
 	{
@@ -267,7 +290,7 @@ Um die Leistung eines Servers ausnutzen zu können werden die geladenen Jobs dur
 		}
 	}
 \end{lstlisting}
-\subsection{Verwendung von Bordmitteln}
+\subsection{Verwendung der .NET Bibliothek für parallele Aufgaben}
 .Net bietet zur asynchronen Abarbeitung von Aufgaben seit der Version 4 eine eigene Bibliothek, die \emph{Task Parallel Library (TPL)}\footnote{Siehe \url{https://msdn.microsoft.com/de-de/library/dd460717(v=vs.110).aspx}}. Diese und die Schlüsselwörtar \code{async/ await} ermöglichen es, Aufgaben sehr einfach parallel abzuarbeiten. Damit könnte der Scheduler wie in Codebeispiel \ref{lst:tpl} dargestellt umgesetzt werden. In Zeile 9 werden dabei die geladenen Jobs durch mehrere threads parallel \code{Parallel.ForEach} ausgeführt.
 \\Da hier sehr viele Elemente versteckt in einer Standard-Bibliothek ablaufen und über weite Strecken die Transparenz und die Tuning-Möglichkeiten durch die Anwendung nicht mehr gegeben sind, wurde eine Umsetzung mittels TPL bewusst nicht gewählt.
 
