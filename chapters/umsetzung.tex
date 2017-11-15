@@ -146,7 +146,7 @@ Nachdem die Jobs geladen wurden, werden sie in der selben Transaktion durch das 
 \section{Skalierung}
 Einer der ausschlaggebenden Gründe für die Entwicklung war, dass bisherige Lösungen hinsichtlich der Leistung schlecht skalieren. Die einzige Möglichkeit ist meist, einen stärkeren Server zu nutzen. Deswegen ist die leichte Skalierung der Leistung eine grundlegende Anforderung an das System. Um bestimmte Aufgaben effizient abarbeiten zu können, kann es notwendig sein, eine darauf ausgelegt Hardware zu verwenden, um in etwa Berechnungen auf einer GPU durchzuführen. Dies wird mit der Möglichkeit der funktionalen Skalierung erreicht.
 \subsection{Skalierung der Leistung} \label{sec:scaling}
-Das umgesetzte System bietet zwei Möglichkeiten die Leistung zu skalieren. Die erste Möglichkeit ist die Skalierung der Leistung innerhalb eines Servers durch die Konfiguration der maximal gleichzeitig laufenden threads pro Instanz. Damit kann die für dJob zur Verfügung stehende Leistung sowohl erhöht, als auch beschränkt werden um andere, am selben Server laufende Applikationen nicht zu beeinflussen.
+Das umgesetzte System bietet zwei Möglichkeiten die Leistung zu skalieren. Die erste Möglichkeit ist die Skalierung der Leistung innerhalb eines Servers durch die Konfiguration der maximal gleichzeitig laufenden Threads pro Instanz. Damit kann die für dJob zur Verfügung stehende Leistung sowohl erhöht, als auch beschränkt werden um andere, am selben Server laufende Applikationen nicht zu beeinflussen.
 \\Die zweite Möglichkeit ist die Nutzung von mehren Servern. Dies ist durch dJob durch Installation des Services und der benötigten Worker erledigt. Es sind keinerlei weitere Anpassungen oder Konfigurationen nötig um das System zum Laufen zu bringen. 
 \\Für die Installation gibt es drei grundlegende Möglichkeiten (siehe auch Darstellung \ref{fig:performance_scaling}):
 \begin{enumerate}
@@ -174,7 +174,7 @@ Worker - Klassen in den Bibliotheken die die Arbeit erledigen, müssen dabei \be
 	\item vom Interface \code{at.loe.djob.core.worker.IWorker} erben
 	\item einen parameterlosen Konstruktor haben.
 \end{enumerate}
-Alle im Verzeichnis vorhandenen Bibliotheken (Zeile 1) werden geladen (Zeile 3). Danach werden alle Klassen die das Interface \code{IWorker} implementieren (Zeile 5\&6) instantiiert (Zeile 8) und in einer Collection\footnote{Es handelt sich um ein \code{ConcurrentDictionary}. Dies ist eine Key/ Value Sammlung mit eindeutigen Keys die für die Verwendung durch mehrere threads vorgesehen ist. Die Zugriffe auf die Collection sind immer thread-safe, alle eventuell notwendigen Sperren werden durch die Collection selbst verwaltet.} abgelegt (Zeile 12).
+Alle im Verzeichnis vorhandenen Bibliotheken (Zeile 1) werden geladen (Zeile 3). Danach werden alle Klassen die das Interface \code{IWorker} implementieren (Zeile 5\&6) instantiiert (Zeile 8) und in einer Collection\footnote{Es handelt sich um ein \code{ConcurrentDictionary}. Dies ist eine Key/ Value Sammlung mit eindeutigen Keys die für die Verwendung durch mehrere Threads vorgesehen ist. Die Zugriffe auf die Collection sind immer thread-safe, alle eventuell notwendigen Sperren werden durch die Collection selbst verwaltet.} abgelegt (Zeile 12).
 \begin{lstlisting}[caption={Dynamic Loading, siehe WorkerRepository.cs - LoadAllWorkers()},label={lst:dynamicloading},captionpos=b]
 foreach ( string file in  workerDirectory.GetFiles( "*.dll" ) )
 {
@@ -195,16 +195,16 @@ foreach ( string file in  workerDirectory.GetFiles( "*.dll" ) )
 	}
 }
 \end{lstlisting}
-Wenn die Bibliotheken die geladen werden sollen Abhängigkeiten zu anderen, nicht-Standard, Bibliotheken haben, so werden diese nur automatisiert aufgelöst und geladen wenn diese entweder global verfügbar sind oder in Verzeichnis des Services zu finden sind \parencite[S. 42ff]{box}). Liegen diese aber im Verzeichnis in dem auch die Worker-Bibliothek abgelegt ist, so muss diese Auflösung durch die Anwendung selbst erfolgen. Dafür stellt .NET das Ereignis \code{AssemblyResolve} zur Verfügung. Die Anwendung kann dann die benötigten Bibliotheken selbst suchen und laden\footnote{Siehe WorkerRepository.cs Methode \code{LoadDependentAssembly()}} \footnote{Wird dies nicht durch die Anwendung erledigt, so erhält man eine \code{FileNotFoundException} mit dem Name der Bilbiothek \emph{die den Verweis enthält}, und nicht, den Namen der Bibliothek die nicht aufgelöst werden kann. }.
+Wenn die Bibliotheken die geladen werden sollen Abhängigkeiten zu anderen, nicht-Standard, Bibliotheken haben, so werden diese nur automatisiert aufgelöst und geladen wenn diese entweder global verfügbar sind oder in Verzeichnis des Services zu finden sind \parencite[S. 42ff]{box}). Liegen diese im Verzeichnis in dem auch die Worker-Bibliothek abgelegt ist, so muss diese Auflösung durch die Anwendung selbst erfolgen. Dafür stellt .NET das Ereignis \code{AssemblyResolve} zur Verfügung. Die Anwendung kann dann die benötigten Bibliotheken selbst suchen und laden\footnote{Siehe WorkerRepository.cs Methode \code{LoadDependentAssembly()}} \footnote{Wird dies nicht durch die Anwendung erledigt, so erhält man eine \code{FileNotFoundException} mit dem Name der Bibliothek \emph{die den Verweis enthält}, und nicht, den Namen der Bibliothek die nicht aufgelöst werden kann. }.
 \\Nachdem alle Worker geladen wurde, werden diese in der Datenbank für die aktuelle Instanz aktualisiert, so dass beim Laden der Jobs für die Instanz nur diese Jobs geladen werden die auch ausgeführt werden können. Dadurch können für jede Instanz unterschiedliche Worker konfiguriert werden, was die zweite Anforderung abdeckt.
 \section{Concurrency}
-Um die Leistung eines Servers ausnutzen zu können werden die geladenen Jobs durch mehrere threads parallel abgearbeitet. Dazu werden durch den \code{DefaultJobScheduler} die konfigurierte Anzahl an threads angelegt und gestartet. Diese beziehen ihre Arbeit aus einer globalen Datenstruktur die Jobs und führen dann die für die Jobs konfigurierten Worker aus. Diese Architektur entspricht dem \emph{Producer/ Consumer Pattern} \parencite[S. 163ff]{jthreads}. Der \code{DefaultJobLoader} entspricht dabei dem Producer, die einzelnen \code{JobWorker} dabei den Consumern. Ein entscheidendes Element dieses Patterns ist die Datenstruktur die für die Entkopplung sorgt. Durch den Zugriff mehrere threads muss diese einerseits thread-safe sein, andererseits müssen die Operationen so effizient wie möglich sein. Daher werden diese zwei Element näher betrachtet.
+Um die Leistung eines Servers ausnutzen zu können werden die geladenen Jobs durch mehrere Threads parallel abgearbeitet. Dazu werden durch den \code{DefaultJobScheduler} die konfigurierte Anzahl an Threads angelegt und gestartet. Diese beziehen ihre Arbeit aus einer globalen Datenstruktur die Jobs und führen dann die für die Jobs konfigurierten Worker aus. Diese Architektur entspricht dem \emph{Producer/ Consumer Pattern} \parencite[S. 163ff]{jthreads}. Der \code{DefaultJobLoader} entspricht dabei dem Producer, die einzelnen \code{JobWorker} dabei den Consumern. Ein entscheidendes Element dieses Patterns ist die Datenstruktur die für die Entkopplung sorgt. Durch den Zugriff mehrere Threads muss diese einerseits thread-safe sein, andererseits müssen die Operationen so effizient wie möglich sein. Daher werden diese zwei Element näher betrachtet.
 \subsection{Producer-Consumer}\label{sec:producerconsumer}
-Der Producer/ Consumer Pattern ist einer der häufigst verwendeten Pattern wenn es um Abarbeitung von Aufgaben durch mehrere threads geht. Er besteht aus 
+Der Producer/ Consumer Pattern ist einer der häufigst verwendeten Pattern wenn es um Abarbeitung von Aufgaben durch mehrere Threads geht. Er besteht aus 
 \begin{itemize}
-	\item ein oder mehreren Producern die in eigenen threads laufen und Arbeitspakete produzieren
-	\item einer zentralen Datenstruktur, in die Producer die Arbeitspakete einfügen und die Producer diese wieder entfernen
-	\item ein oder mehrere Consumer, die wiederum als eigene threads laufen und die Arbeitspakete aus der zentralen Datenstruktur holen und abarbeiten.
+	\item ein oder mehreren Producern die in eigenen Threads laufen und Arbeitspakete produzieren
+	\item einer zentralen Datenstruktur, in die Producer die Arbeitspakete einfügen und die Consumer diese entfernen
+	\item ein oder mehrere Consumer, die wiederum als eigene Threads laufen und die Arbeitspakete aus der zentralen Datenstruktur holen und abarbeiten.
 \end{itemize}
 Dies ist auch in Abbildung \ref{fig:architecture} dargestellt.\parencite{jthreads}
 \begin{figure}
@@ -213,8 +213,8 @@ Dies ist auch in Abbildung \ref{fig:architecture} dargestellt.\parencite{jthread
 	\caption{Producer/ Consumer Darstellung, vgl. \parencite[S. 163]{jthreads}}
 	\label{fig:architecture}
 \end{figure}
-\\Die Verbreitung dürfte in seiner Einfachheit begründet sein. Denn sowohl Producer als auch Consumer, die jweweils in verschiedenen threads ihre Arbeit verrichten brauchen beim Zugriff auf die Daten keine weiteren Aktionen durchführen\footnote{Dies gilt für die zu bearbeitenden Daten, beim Zugriff auf andere, globale Daten sind diese sehr wohl Sperren zu setzen.} \parencite[S. 163ff]{jthreads}. Der Schutz der Daten des Arbeitspaketes erfolgt durch die Datenstruktur, in der Regel eine Queue. Diese setzt innerhalb der öffentlichen Methoden die Sperren wenn nötig. Diese übernimmt auch die Aufgabe des Aufweckens von Consumern wenn Arbeit anliegt.
-\\Der Pattern ist auch sehr vielseitig. In einer weiteren gebräuchlichen Form (siehe Abbildung \ref{fig:architecture_2}) ist die Verwendung von mehreren Queues und einem Dispatcher. Dies kann einerseits bei einer sehr hohen Anzahl an Producern oder Consumern verwendet werden, da dadurch die Häufigkeit der Sperren, und damit die Wartezeit eines threads gesenkt wird. Weiters kann auch die Anzahl an Consumern pro Queue unterschiedlich sein. Damit kann der Dispatcher wichtigere Arbeitsaufgaben in die Queue legen der mehr Consumer zugeteilt sind. Damit erfolgt eine schnellere Abarbeitung des Arbeitspaketes.
+\\Die Verbreitung dürfte in seiner Einfachheit begründet sein. Denn sowohl Producer als auch Consumer, die jweweils in verschiedenen Threads ihre Arbeit verrichten brauchen beim Zugriff auf die Daten keine weiteren Aktionen durchführen\footnote{Dies gilt für die zu bearbeitenden Daten, beim Zugriff auf andere, globale Daten sind diese sehr wohl Sperren zu setzen.} \parencite[S. 163ff]{jthreads}. Der Schutz der Daten des Arbeitspaketes erfolgt durch die Datenstruktur, in der Regel eine Queue. Diese setzt innerhalb der öffentlichen Methoden die Sperren wenn nötig. Diese übernimmt auch die Aufgabe des Aufweckens von Consumern wenn Arbeit anliegt.
+\\Der Pattern ist auch sehr vielseitig. In einer weiteren gebräuchlichen Form (siehe Abbildung \ref{fig:architecture_2}) ist die Verwendung von mehreren Queues und einem Dispatcher. Dies kann einerseits bei einer sehr hohen Anzahl an Producern oder Consumern verwendet werden, da dadurch die Häufigkeit der Sperren, und damit die Wartezeit eines Threads gesenkt wird. Weiters kann auch die Anzahl an Consumern pro Queue unterschiedlich sein. Damit kann der Dispatcher wichtigere Arbeitsaufgaben in die Queue legen der mehr Consumer zugeteilt sind. Damit erfolgt eine schnellere Abarbeitung des Arbeitspaketes.
 \begin{figure}
 	\centering
 	\includegraphics[width=0.7\linewidth]{images/pc_w_dispatcher}
@@ -226,72 +226,67 @@ Dies ist auch in Abbildung \ref{fig:architecture} dargestellt.\parencite{jthread
 Wie im vorigen Kapitel beschrieben, leistet die zentrale Datenstruktur im Producer/ Consumer Pattern den Großteil der Arbeit was die Synchronisierung der einzelnen Threads betrifft. Daher ist das Design und die Implementierung dieser Klasse essentiell für die Leistung des Gesamtsystems. Die Klasse muss
 \begin{itemize}
 	\item sicherstellen dass die Methode zum Einfügen der Elemente thread-safe ist, also mehrere Threads zugleich Elemente einfügen können ohne die Datenstruktur zu beschädigen
-	\item sicherstellen, dass die Methode zum Entfernen der Elemente thread-sage ist
+	\item sicherstellen, dass die Methode zum Entfernen der Elemente thread-safe ist
 	\item Consumer Threads suspendieren wenn keine weitere Arbeit anliegt
 	\item Consumer Threads aufwecken wenn weitere Arbeit eingefügt wurde
 	\item die Anzahl an gesetzten Sperren und die Zeitdauer der Sperre so gering wie möglich halten.
 \end{itemize}
-\begin{lstlisting}[caption={Implementierung Blocking Q - V1, siehe MyBlockingQV1.cs}, label={lst:blockingV1}, captionpos=b]
-	public class MyBlockingQueueV1<T>
+Codebeispiel \ref{lst:blockingQ} zeigt die Implementierung einer solchen Klasse. Zur Datenhaltung wird die Standardklasse \code{Queue} verwendet (\code{backingStore}), die selbst nicht thread-safe ist.
+\begin{lstlisting}[caption={Implementierung BlockingQ, siehe MyBlockingQ.cs}, label={lst:blockingQ}, captionpos=b]
+    public class MyBlockingQueue<T>
 	{
-		/// <summary>
-		/// The backing store used for the elements
-		/// </summary>
 		private Queue<T> backingStore = new Queue<T>();
-		
+
 		/// <summary>
-		/// lock to protect the q
+		/// lock to protect the backingStore and used for notifications
 		/// </summary>
-		private object myLock = new object();
-		
-		
-		
-		public MyBlockingQueueV1()
+		private readonly object myLock = new object();
+
+		public MyBlockingQueue()
 		{ /* empty */ }
-		
+
+
+		/// <summary>
+		/// add an item to the queue in a threadsafe way
+		/// </summary>
 		public void Enque( T newElement )
-		{
-			lock ( myLock )
-			{
-				backingStore.Enqueue( newElement );
-			}
-		}
-		
-		
-		public T Dequeue()
-		{
-			lock ( myLock )
-			{
-				return backingStore.Dequeue();
-			}
-		}
-		
-		public T TryDequeue()
 		{
 			lock( myLock )
 			{
-				if( !IsEmpty() )
-				{
-					return Dequeue();
-				}
-				else
-				{
-					return default( T );
-				}
+				backingStore.Enqueue( newElement );
+
+				Monitor.Pulse( myLock );
 			}
 		}
-		
-		public bool IsEmpty()
+
+		/// <summary>
+		/// Take an item from the queue
+		/// if no item is available, wait until an element has been put into the queue and check again
+		/// </summary>
+		/// <returns>an element from the q</returns>
+		public T Dequeue( int millisecondsTimeout )
 		{
-			lock ( myLock )
+			lock( myLock )
 			{
-				return backingStore.Count == 0;
+
+				while ( ! backingStore.Any() )
+				{
+					if( !Monitor.Wait( myLock, millisecondsTimeout ) )
+					{
+						return default( T );
+					}
+				}
+
+				return backingStore.Dequeue();
 			}
 		}
-	}
+}
 \end{lstlisting}
+Die gezeigte Implementierung erfüllt alle genannten Bedingungen. In der Methode \code{Enque} wird innerhalb einer gesetzten Sperre ein Element der Sammlung hinzugefügt(Zeile 21). Und danach mittels eines Monitors ein suspendierter Consumer geweckt (Zeile 23)\footnote{Sollte kein Consumer suspendiert sein, so erfolgt keine Aktion.}. 
+Die Consumer rufen die Methode \code{Deque} auf und erhalten entweder eine Element oder werden suspendiert. In der Methode wird eine Sperre gesetzt (Zeile 34) und danach geprüft ob Elemente vorhanden sind (Zeile 37). Wenn Elemente vorhanden sind, wird das erste Element der Queue zurückgegeben (Zeile 42). Wenn kein Element vorhanden ist, so wird auf das Einfügen eines Elementes gewartet (Zeile 39). Wird der Thread aufgeweckt, so wird nochmals geprüft ob Elemente vorhanden sind und erst danach das erste Element zurückgegeben\footnote{Ein anderer Consumer könnte das Element welches das Aufwecken ausgelöst hat bereits abgearbeitet haben, siehe dazu auch \ref{sss:Monitore}}. Um steuern zu können wie lange die einzelnen Consumer warten, kann eine Zeit in Millisekunden angegeben werden die gewartet wird. Wird innerhalb der Zeitspanne kein neues Element eingefügt, so wird der Default-Wert des Typs zurückgegeben.
+ 
 \subsection{Verwendung der .NET Bibliothek für parallele Aufgaben}
-.Net bietet zur asynchronen Abarbeitung von Aufgaben seit der Version 4 eine eigene Bibliothek, die \emph{Task Parallel Library (TPL)}\footnote{Siehe \url{https://msdn.microsoft.com/de-de/library/dd460717(v=vs.110).aspx}}. Diese und die Schlüsselwörtar \code{async/ await} ermöglichen es, Aufgaben sehr einfach parallel abzuarbeiten. Damit könnte der Scheduler wie in Codebeispiel \ref{lst:tpl} dargestellt umgesetzt werden. In Zeile 9 werden dabei die geladenen Jobs durch mehrere threads parallel \code{Parallel.ForEach} ausgeführt.
+.Net bietet zur asynchronen Abarbeitung von Aufgaben seit der Version 4 eine eigene Bibliothek, die \emph{Task Parallel Library (TPL)}\footnote{Siehe \url{https://msdn.microsoft.com/de-de/library/dd460717(v=vs.110).aspx}}. Diese und die Schlüsselwörtar \code{async/ await} ermöglichen es, Aufgaben sehr einfach parallel abzuarbeiten. Damit könnte der Scheduler wie in Codebeispiel \ref{lst:tpl} dargestellt umgesetzt werden. In Zeile 9 werden dabei die geladenen Jobs durch mehrere Threads parallel \code{Parallel.ForEach} ausgeführt.
 \\Da hier sehr viele Elemente versteckt in einer Standard-Bibliothek ablaufen und über weite Strecken die Transparenz und die Tuning-Möglichkeiten durch die Anwendung nicht mehr gegeben sind, wurde eine Umsetzung mittels TPL bewusst nicht gewählt.
 
 \begin{lstlisting}[caption={JobScheduler, einfache TPL Implementierung, siehe SimpleTpl.cs}, label={lst:tpl}, captionpos=b]
