@@ -1,15 +1,15 @@
 \selectlanguage{german}
 \chapter{Einleitung}\label{chap:Einleitung}
 \chapterstart
-In diesem Kapitel stelle ich das zugrundeliegende Problem einführend vor. Aus einer allgemeinen Beschreibung werden im Zusammenspiel mit einer beispielhaften Verwendung der zu entwickelnden Software die grundlegenden Anforderungen erarbeitet. Aus diesen werden die Ziele dieser Arbeit definiert.
+In diesem Kapitel stelle ich das zugrundeliegende Problem vor. Aus einer allgemeinen Beschreibung werden im Zusammenspiel mit einer beispielhaften Verwendung der zu entwickelnden Software die grundlegenden Anforderungen erarbeitet. Aus diesen werden die Ziele dieser Arbeit definiert.
 \section{Motivation}
-Die meisten Benutzer von Computerprogrammen nutzen diese interaktiv. Sie befinden sich in einem Dialog mit der Software wo sie aufgrund ihrer Eingabe eine bestimmte Ausgabe erwarten. Handelt es sich bei den Aufgaben die so dem Programm gestellt werden um länger laufende Aktionen, so gibt der Benutzer bloß den Anstoß, die Aufgabe selbst wird ohne weitere Interaktion erledigt und das Ergebnis angezeigt. Die meiste Zeit ist die Aufmerksamkeit des Benutzers nicht notwendig. Gibt es nun mehre Aufgabenstellungen dieser Art die auch noch wiederholt ausgeführt werden müssen, so sollten diese automatisiert werden, so dass sie ohne Eingriff des Benutzers ausgeführt werden und dieser nur mehr bei Problemen informiert wird.\\
-Bei Aufgaben dieser Art handelt es sich oft auch um Datenimporte, bei denen aus unterschiedlichen Quellsystemen Daten geladen und in Zielsysteme importiert oder mit den Daten in Zielsystemen abgeglichen werden.\\
+Die meisten Benutzer von Computerprogrammen nutzen diese interaktiv. Sie befinden sich in einem Dialog mit der Software, wo sie aufgrund ihrer Eingabe eine bestimmte Ausgabe erwarten. Handelt es sich bei den Aufgaben die so dem Programm gestellt werden um länger laufende Aktionen, so gibt der Benutzer bloß den Anstoß, die Aufgabe selbst wird ohne weitere Interaktion erledigt und das Ergebnis angezeigt. Die meiste Zeit ist die Aufmerksamkeit des Benutzers nicht notwendig. Gibt es nun mehre Aufgabenstellungen dieser Art die wiederholt ausgeführt werden müssen, so sollten diese automatisiert werden, so dass sie ohne Eingriff des Benutzers ausgeführt werden und dieser nur mehr bei Problemen informiert wird.\\
+Bei Aufgaben dieser Art handelt es sich oft um Datenimporte, bei denen aus unterschiedlichen Quellsystemen Daten geladen und in Zielsysteme importiert oder mit den Daten in Zielsystemen abgeglichen werden.\\
 Die regelmäßige Ausführung von Programmen wird durch \emph{Scheduler} übernommen. Dies sind Programme die gemäß einem durch den Benutzer definierten Zeitplan Aufgaben automatisiert ausführen. Zwei der bekanntesten Vertreter sind \emph{cron} unter Linux oder der \emph{Windows Task Scheduler} für Microsoft Windows.\\
 Beide Scheduler bieten eine gute Möglichkeit Programme basierend auf Zeitplänen auszuführen, beide haben jedoch die Einschränkungen dass sie
 \begin{itemize}
 	\item Programme nur auf einem Rechner ausführen und
-	\item komplette Programme ausführen.
+	\item nur komplette Programme ausführen.
 \end{itemize}
 Wenn die Anzahl der Aufgaben die ausgeführt werden soll ansteigt, müssen die Aufgaben durch den Benutzer selbst auf mehrere Rechner verteilt werden. Wenn ein Rechner ausfällt oder ein neuer Rechner hinzukommt muss der Benutzer die Aufgaben ebenso neu verteilen.\\
 Ebenso sind beide Scheduler darauf ausgelegt komplette Programme, also \emph{executables} auszuführen. Dadurch müssen diese für Ausführung ein neuer \emph{Prozess} angelegt werden und die dazugehörigen Daten erneut in den Speicher geladen werden. Werden nun häufig die selben Aufgaben erledigt und sind diese relativ klein, so steht der Zusatzaufwand des Ausführens meist nicht im Verhältnis zur Ausführungszeit der Aufgabe selbst.\\
@@ -17,12 +17,13 @@ Für den Fall der umzusetzen war stellten diese beiden Herausforderung ein groß
 
 \section{Beispielhafte Verwendung}
 Eines der Hauptthemen in der Industrie 4.0 ist die Einbindung von Sensoren in EDV Systeme um durch deren Daten einerseits Informationen zu aktuellen (Betriebs-) Zuständen zu erhalten und andererseits durch die Sammlung der Daten mithilfe von Big-Data Algorithmen weitere Schlussfolgerungen ziehen zu können.\parencite[S. 36ff]{Manzei2015}\\
-Dabei wird in der Regel stillschweigen von der neuesten Generation von Sensoren ausgegangen, die ihrerseits aktiv Daten in die Cloud publizieren.\footnote{Siehe zum Beispiel \parencite{ms_azureiot} "...the device sends..."} Diese Sensoren sind aktiv und lösen somit die weitere Verarbeitung der Daten aus. Es ist keine Aktivierung von Außen notwendig.\\
-Viele der derzeit bestehenden Sensoren sind allerdings passiv und stellen ihre Daten nur nach Nachfrage zur Verfügung. Die Daten dieser Sensoren müssen also periodisch abgefragt und an die weiterverarbeitenden Prozesse weitergereicht werden.\\
-In der beispielhaften Verwendung geht es darum Standbilder von bereits bestehenden Überwachungskameras zu Dokumentationszwecken in einem Archiv abzulegen. Die Anzahl der Kameras beträgt in etwa 1.000 und wird mit der Zeit deutlich steigen, damit muss das System frei skalieren.\\ 
+Dabei wird in der Regel stillschweigend von der neuesten Generation von Sensoren ausgegangen, die aktiv Daten in die Cloud publizieren.\footnote{Siehe zum Beispiel \parencite{ms_azureiot} "...the device sends..."} Diese Sensoren sind aktiv und lösen somit die weitere Verarbeitung der Daten aus. Es ist keine Aktivierung von Außen notwendig.\\
+Viele der derzeit bestehenden Sensoren sind passiv und stellen ihre Daten nur auf Nachfrage zur Verfügung. Die Daten dieser Sensoren müssen periodisch abgefragt, und an die weiterverarbeitenden Prozesse weitergereicht werden.\\
+In der beispielhaften Verwendung sollen Standbilder von bestehenden Überwachungskameras zu Dokumentationszwecken in einem Archiv abzulegen. Die Anzahl der Kameras beträgt in etwa 1.000 und wird mit der Zeit deutlich steigen, damit muss das System frei skalieren.\\ 
 \section{Ziele der Arbeit}
 Ziel der Arbeit ist es einen funktionstüchtigen Scheduler der auf mehreren Rechnern läuft und nicht vollständige Prozesse ausführt zu erstellen. Im Rahmen dieser Arbeit wird nur der Scheduler Kern entwickelt, die Oberflächen zum Einrichten und Verwalten der Aufgaben, sowie das Einsehen der Protokolle wird nicht umgesetzt.
-\\Im Theorieteil werden die zugrundeliegenden Themen im Bereich Datenbanken und Concurrency\footnote{Zu Deutsch Nebenläufigkeit. Im Sinne der besseren technischen Verständlichkeit werde ich im folgenden nur den englischen Fachbegriff verwenden.} mittels Literaturrecherche erläutert.\\ Durch diese Erläuterungen sollen die getroffenen Designentscheidungen untermauert werden und einem Entwickler die Themenkomplexe verständlich vermittelt werden.
+\\Im Theorieteil werden die zugrundeliegenden Themen in den Bereichen Datenbanken und Concurrency\footnote{Zu Deutsch Nebenläufigkeit. Im Sinne der besseren technischen Verständlichkeit werde ich im folgenden nur den englischen Fachbegriff verwenden.} mittels Literaturrecherche erläutert.
+\\ Durch diese Erläuterungen sollen die getroffenen Designentscheidungen untermauert werden und einem Entwickler die Themenkomplexe verständlich vermittelt werden.
 
 \section{Verwendete Programmierumgebung}
 Für die Umsetzung des Schedulers - und in folge auch der Implementierung der einzelnen Aufgaben - wurde das Microsoft .NET Ökosystem gewählt. Verwendet wurden
@@ -42,7 +43,7 @@ Die Auswahl wurde einerseits durch meinen bisherige Erfahrung mit .NET / C\# gep
 \end{itemize}
 \section{Anforderungen}\label{chap:Anforderungen}
 \subsection{Allgemein}
-Wie schon Eingangs erwähnt, soll das System Bilder in regelmäßigen Abständen von Kameras abholen und diese auf einem Archivserver speichern. Die Abholung erfolgt dabei - je nach Standort der Kamera - einmal alle Stunden oder einmal jede Minute.\\
+Wie Eingangs erwähnt, soll das System Bilder in regelmäßigen Abständen von Kameras abholen und diese auf einem Archivserver speichern. Die Abholung erfolgt dabei - je nach Standort der Kamera - einmal alle Stunden oder einmal jede Minute.\\
 Da die Kameras getauscht werden und neue Kameras hinzukommen ist es notwendig, dass die Einrichtung der einzelnen Aufgaben für den Benutzer einfach und auch während des Betriebes erfolgen kann.\\
 Die im folgenden angeführten Anforderungen sind vom System auf alle Fälle zu erfüllen. Die Anforderungen sind hierarchisch dargestellt und auf Spezifikationsebene 1 und 2 beschränkt\parencite[S. 45]{rupp2009}.
 \subsection{Funktionelle Anforderungen}
