@@ -3,10 +3,10 @@
 \chapter{Konklusio}\label{chap:Konklusio}
 %-----------------------------------------------------------------------------
 \chapterstart
-\section{Erfüllung der Anforderungen}
-aasdasd
-\section{Verwendbarkeit der erstellten Software}
-dsds
-\section{Abschlussbemerkung}
-asdasd
+
+\section{Zusammenfassung}
+Im Rahmen dieser Arbeit wurden einige theoretischen Grundlagen für wichtige Techniken zur Umsetzung von performanten Anwendungen gezeigt. Dies waren vor allem der Umgang mit mehreren Threads und die Grundlagen von parallelem Zugriff auf Datenbanksysteme. Diese Techniken wurden verwendet um ein System zur verteilten Ausführung von Aufgaben umzusetzen. Durch die Nutzung eines Datenbanksystemes konnten die Aufgabenstellungen zur Datenspeicherung und zur Verteilung der Aufgaben über mehrere Server gelöst werden. Das entwickelte Service nutzt die Technik des dynamischen Ladens von Programmteilen um neue Arten von Aufgaben ohne Änderung des Programmcodes des Services zu ermöglichen. Das Abarbeiten der Aufgaben wurde mit einem Procuder/ Consumer Pattern um gesetzt, um so die Leistung des jeweiligen Servers optimal ausnutzen zu können.
+\\Die Anwendung der jeweiligen Techniken und Vor- oder Nachteile wurden in der Umsetzung beschrieben um für den Leser die Umsetzung verständlich zu machen.
+\\Das entwickelte Service sowie außerhalb dieser Arbeit entwickelte Worker zur Skalierung von Bildern werden in einer beispielhaften Umsetzung verwendet um die Brauchbarkeit des Systems in der Praxis zu testen. Dabei werden auf drei Servern auf Österreich verteilt Daten von mehr als 1.000 Messstationen verarbeitet. Es dabei in fixen Zeitabständen unter anderem Bilddaten von den einzelnen Stationen geholt und danach in verschiedene Auflösungen umgerechnet und abgelegt. Im Rahmen des Hochfahrens des Systems wurde die Anzahl der Server von 2 auf 3 erhöht, da der Aufwand zur Umrechnung der Bilder viel Leistung in Anspruch nahm. Dies war durch die Auslegung des Systems leicht zu bewerkstelligen.
+\\Die Eingangs gesetzten Ziele der Arbeit konnten somit erreicht werden.
 \chapterend
